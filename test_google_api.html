@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Google API</title>
+</head>
+
+<body>
+    <h1>Testing Google API</h1>
+    <pre id="output" style="background: #f0f0f0; padding: 10px; border-radius: 5px;">Waiting for output...</pre>
+    <script>
+        const output = document.getElementById('output');
+        const originalLog = console.log;
+        const originalError = console.error;
+        function appendOutput(type, args) {
+            const text = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
+            ).join(' ');
+            output.textContent += `[${type}] ${text}\n`;
+        }
+        console.log = (...args) => {
+            appendOutput('LOG', args);
+            originalLog.apply(console, args);
+        };
+        console.error = (...args) => {
+            appendOutput('ERROR', args);
+            originalError.apply(console, args);
+        };
+    </script>
+    <script type="importmap">
+    {
+        "imports": {
+            "axios": "https://cdn.jsdelivr.net/npm/axios/+esm"
+        }
+    }
+    </script>
+    <script type="module" src="./test_google_api.js"></script>
+</body>
+
+</html>
