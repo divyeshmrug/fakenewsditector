@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { detectFakeNews, type AnalysisResult } from '../services/huggingFaceApi';
-import { checkGoogleFacts, type FactCheckResult } from '../services/googleFactCheckApi';
-import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle } from 'lucide-react';
+import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../services/secureApi';
+import { checkFacts, type FactCheckResult } from '../services/factCheckService';
+import { fetchNews, type NewsResult } from '../services/newsService';
+import { fetchAlternativeNews, fetchAlternativeWeb, type AlternativeSearchResult } from '../services/searchService';
+import { useSettings } from '../context/SettingsContext';
+import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper } from 'lucide-react';
 
 const Dashboard = () => {
+    const { keys } = useSettings();
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<AnalysisResult | null>(null);
     const [factCheck, setFactCheck] = useState<FactCheckResult | null>(null);
+    const [newsData, setNewsData] = useState<NewsResult | null>(null);
+    const [altData, setAltData] = useState<AlternativeSearchResult | null>(null);
     const [error, setError] = useState('');
 
     const handleAnalyze = async (e: React.FormEvent) => {
@@ -18,17 +24,55 @@ const Dashboard = () => {
         setError('');
         setResult(null);
         setFactCheck(null);
+        setNewsData(null);
+        setAltData(null);
 
         try {
-            // 1. Check Google Facts First (Ground Truth)
-            const googleResult = await checkGoogleFacts(text);
-            setFactCheck(googleResult);
+            // 1. Check Official Database first
+            const databaseResult = await checkFacts(text, keys.check);
+            setFactCheck(databaseResult);
 
-            // 2. Run AI Analysis (Advanced Logic)
-            const aiData = await detectFakeNews(text);
+            // 2. Search Multi-Source Context in Parallel
+            const [globalNews, altNews, altWeb] = await Promise.all([
+                fetchNews(text, keys.news),
+                fetchAlternativeNews(text, keys.search),
+                fetchAlternativeWeb(text, keys.search)
+            ]);
+
+            setNewsData(globalNews);
+            setAltData(altNews);
+
+            // 3. Construct Context for AI
+            let aiContext = 'VERIFICATION CONTEXT FROM MULTIPLE SOURCES:\n';
+
+            if (databaseResult.found && databaseResult.rating) {
+                aiContext += `\n--- SOURCE: OFFICIAL VERIFICATION ---\nRating: ${databaseResult.rating}\nClaim: ${databaseResult.text}\nReviewer: ${databaseResult.publisher}\n`;
+            }
+
+            if (altNews.found && altNews.articles) {
+                aiContext += `\n--- SOURCE: PUBLIC NEWS ARCHIVE ---\n`;
+                altNews.articles.slice(0, 3).forEach((art: any, idx: number) => {
+                    aiContext += `${idx + 1}. ${art.title}\nSnippet: ${art.snippet}\nSource: ${art.source}\n`;
+                });
+            }
+
+            if (altWeb.found && altWeb.articles) {
+                aiContext += `\n--- SOURCE: WEB ARCHIVE ---\n`;
+                altWeb.articles.slice(0, 3).forEach((art: any, idx: number) => {
+                    aiContext += `${idx + 1}. ${art.title}\nSnippet: ${art.snippet}\n`;
+                });
+            }
+
+            if (globalNews.found && globalNews.topArticle) {
+                aiContext += `\n--- SOURCE: GLOBAL MEDIA ---\nTitle: ${globalNews.topArticle.title}\nDescription: ${globalNews.topArticle.description}\n`;
+            }
+
+            // 4. Run AI Analysis with Enhanced Context
+            const aiData = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME);
             setResult(aiData);
 
         } catch (err: any) {
+            console.error('Analysis Flow Error:', err);
             const msg = err.message || 'Failed to analyze text. Please check your connection.';
             setError(msg);
         } finally {
@@ -38,73 +82,62 @@ const Dashboard = () => {
 
     const getResultColor = (label: string) => {
         switch (label) {
-            case 'TRUE': return 'text-green-500';
-            case 'FALSE': return 'text-red-500';
-            case 'MISLEADING': return 'text-orange-500';
-            default: return 'text-yellow-500';
+            case 'TRUE': return 'text-green-400';
+            case 'FALSE': return 'text-red-400';
+            case 'MISLEADING': return 'text-orange-400';
+            default: return 'text-yellow-400';
         }
     };
 
     const getResultIcon = (label: string) => {
         switch (label) {
-            case 'TRUE': return <BadgeCheck size={80} className="text-green-500" />;
-            case 'FALSE': return <ShieldAlert size={80} className="text-red-500" />;
-            case 'MISLEADING': return <AlertTriangle size={80} className="text-orange-500" />;
-            default: return <HelpCircle size={80} className="text-yellow-500" />;
+            case 'TRUE': return <BadgeCheck size={80} className="text-green-400" />;
+            case 'FALSE': return <ShieldAlert size={80} className="text-red-400" />;
+            case 'MISLEADING': return <AlertTriangle size={80} className="text-orange-400" />;
+            default: return <HelpCircle size={80} className="text-yellow-400" />;
         }
     };
 
-    // Determine final display based on Priority (Google Fact > AI)
-    // If Google says False, force FALSE. If True, force TRUE.
-    const finalLabel = factCheck && factCheck.found ? (
-        factCheck.rating?.toLowerCase().includes('true') ? 'TRUE' : 'FALSE'
-    ) : result?.label;
-
-    const finalScore = factCheck && factCheck.found ? (
-        factCheck.rating?.toLowerCase().includes('true') ? 100 : 0
-    ) : result?.score;
-
-    // Use finalLabel/finalScore for display if available, else fallback to result
-    const displayLabel = finalLabel || result?.label;
-    const displayScore = finalScore !== undefined ? finalScore : result?.score;
+    const displayLabel = result?.label;
+    const displayScore = result?.score;
 
     return (
         <div className="w-full h-full min-h-[calc(100vh-80px)] p-6 bg-gray-900 flex flex-col items-center">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-8 text-center bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent tracking-tight">
-                News Authenticator
+            <h1 className="text-4xl md:text-5xl font-black mb-8 text-center bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent tracking-tighter">
+                AUTHENTICITY ENGINE
             </h1>
 
             <div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
                 {/* Input Section */}
-                <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700 flex flex-col">
-                    <label className="text-gray-300 text-lg font-semibold mb-4 flex items-center">
-                        <Info className="mr-2" size={20} />
-                        Input News Content
+                <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-gray-700/50 flex flex-col">
+                    <label className="text-gray-400 text-sm font-bold mb-4 flex items-center uppercase tracking-widest">
+                        <Info className="mr-2" size={16} />
+                        Input Content
                     </label>
                     <textarea
-                        className="flex-grow w-full bg-gray-900 border border-gray-700 rounded-xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none font-medium leading-relaxed"
-                        placeholder="Paste article text or headline here..."
+                        className="flex-grow w-full bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
+                        placeholder="Paste text or headline to verify..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                     />
-                    <div className="mt-6 flex justify-end">
+                    <div className="mt-8 flex justify-end">
                         <button
                             onClick={handleAnalyze}
                             disabled={loading || !text.trim()}
-                            className={`flex items-center space-x-3 px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 ${loading || !text.trim()
-                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                            className={`flex items-center space-x-3 px-10 py-4 rounded-2xl font-black text-lg transition-all transform active:scale-95 shadow-xl ${loading || !text.trim()
+                                ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
+                                : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-950/50 border border-cyan-400/30'
                                 }`}
                         >
                             {loading ? (
                                 <>
                                     <Loader2 className="animate-spin" size={24} />
-                                    <span>Analyzing...</span>
+                                    <span className="tracking-widest">ANALYZING</span>
                                 </>
                             ) : (
                                 <>
                                     <Send size={24} />
-                                    <span>Analyze Authenticity</span>
+                                    <span className="tracking-widest">VERIFY NOW</span>
                                 </>
                             )}
                         </button>
@@ -112,73 +145,79 @@ const Dashboard = () => {
                 </div>
 
                 {/* Result Section */}
-                <div className="bg-gray-800 rounded-2xl shadow-2xl p-6 border border-gray-700 flex flex-col justify-center items-center relative overflow-hidden">
-                    {result && displayLabel ? (
-                        <div className="text-center z-10 w-full animate-fade-in-up flex flex-col items-center p-4">
+                <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-gray-700/50 flex flex-col justify-center items-center relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-[120px] rounded-full -mr-32 -mt-32 group-hover:bg-cyan-500/10 transition-colors"></div>
 
-                            <div className="mb-4 drop-shadow-lg animate-bounce-short">
+                    {result && displayLabel ? (
+                        <div className="text-center z-10 w-full animate-fade-in-up flex flex-col items-center">
+
+                            <div className="mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
                                 {getResultIcon(displayLabel)}
                             </div>
 
-                            <h2 className={`text-6xl font-black mb-2 ${getResultColor(displayLabel)} tracking-tight`}>
+                            <h2 className={`text-7xl font-black mb-4 ${getResultColor(displayLabel)} tracking-tighter uppercase`}>
                                 {displayLabel}
                             </h2>
 
-                            <div className="text-white text-2xl font-bold mb-6 bg-gray-700/50 px-6 py-2 rounded-full border border-gray-600">
-                                Confidence: <span className={getResultColor(displayLabel)}>{displayScore}%</span>
+                            <div className="text-white text-xl font-bold mb-8 bg-gray-900/80 px-8 py-3 rounded-full border border-gray-700 shadow-lg">
+                                VERDICT ACCURACY: <span className={getResultColor(displayLabel)}>{displayScore}%</span>
                             </div>
 
-                            {/* Reasoning Box - Show Google context if overrides, else AI reason */}
-                            <div className="bg-gray-900/60 border border-gray-600/50 rounded-xl p-6 max-w-lg w-full mb-6 text-left relative overflow-hidden">
-                                <div className={`absolute top-0 left-0 w-1 h-full ${displayLabel === 'TRUE' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Analysis Reason</h3>
-                                <p className="text-gray-200 text-lg leading-relaxed font-medium">
-                                    {factCheck && factCheck.found ? (
-                                        <>
-                                            Matched verify fact-check: "{factCheck.rating}" by {factCheck.publisher}.
-                                        </>
-                                    ) : (
-                                        result.reason
+                            <div className="bg-gray-950/80 border border-gray-700/50 rounded-2xl p-8 max-w-lg w-full mb-8 text-left backdrop-blur-sm relative shadow-2xl">
+                                <div className={`absolute top-0 left-0 w-1.5 h-full rounded-l-2xl ${displayLabel === 'TRUE' ? 'bg-green-500' : (displayLabel === 'UNVERIFIED' ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
+                                <h3 className="text-gray-500 text-xs font-black uppercase tracking-[0.2em] mb-4">Core Reasoning</h3>
+                                <p className="text-gray-100 text-lg leading-relaxed font-semibold">
+                                    {result?.reason}
+                                    {(newsData?.found || altData?.found || factCheck?.found) && (
+                                        <span className="block mt-6 text-sm text-cyan-400 font-bold border-t border-gray-800 pt-4 flex items-center">
+                                            <ShieldCheck size={16} className="mr-2" />
+                                            Unified cross-verification confirmed via multiple secure archives.
+                                        </span>
                                     )}
                                 </p>
                             </div>
 
-                            {/* Fact Check Link (if available) */}
                             {factCheck && factCheck.found && (
-                                <div className="bg-blue-900/20 border border-blue-500/40 rounded-xl p-4 max-w-lg w-full mb-2 text-left animate-pulse-slow">
-                                    <div className="flex items-center text-blue-400 mb-2">
+                                <div className="bg-cyan-900/10 border border-cyan-500/20 rounded-2xl p-6 max-w-lg w-full mb-4 text-left group/card hover:bg-cyan-900/20 transition-all">
+                                    <div className="flex items-center text-cyan-400 mb-3">
                                         <Search size={18} className="mr-2" />
-                                        <span className="font-bold text-sm uppercase tracking-wider">Source Found</span>
+                                        <span className="font-black text-xs uppercase tracking-widest">Archive Record Found</span>
                                     </div>
-                                    <p className="text-white text-lg font-medium mb-1">"{factCheck.text || factCheck.rating}"</p>
-                                    <a href={factCheck.url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 text-xs underline">
-                                        Read Independent Check
-                                    </a>
+                                    <p className="text-gray-400 text-sm italic font-medium leading-relaxed line-clamp-2">
+                                        "{factCheck.text}"
+                                    </p>
+                                    <div className="mt-4 flex items-center justify-between border-t border-cyan-500/10 pt-4">
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">Database Rating: {factCheck.rating}</span>
+                                        <a
+                                            href={factCheck.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-black uppercase tracking-tighter border-b border-cyan-400/50"
+                                        >
+                                            View Documentation →
+                                        </a>
+                                    </div>
                                 </div>
                             )}
-
                         </div>
                     ) : (
-                        <div className="text-center text-gray-600 z-10">
-                            <div className="mb-6 opacity-20">
-                                <ShieldCheck size={120} />
-                            </div>
-                            <p className="text-xl font-medium">Ready to verify</p>
-                            <p className="text-sm">Input claims to check against facts & AI</p>
+                        <div className="text-gray-600 flex flex-col items-center max-w-xs text-center opacity-40">
+                            <Newspaper size={120} className="mb-6 stroke-[1]" />
+                            <p className="text-2xl font-black uppercase tracking-tighter">Engine Standby</p>
+                            <p className="text-xs mt-4 font-bold uppercase tracking-widest leading-loose">
+                                Ready for multi-archive cross-verification.
+                            </p>
                         </div>
                     )}
 
-                    {/* Background decorations */}
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
+                    {error && (
+                        <div className="mt-6 p-5 bg-red-950/30 border border-red-500/30 rounded-2xl text-red-300 text-sm flex items-center max-w-lg shadow-2xl animate-shake">
+                            <AlertTriangle size={20} className="mr-3 flex-shrink-0 text-red-500" />
+                            <span className="font-bold tracking-tight">{error}</span>
+                        </div>
+                    )}
                 </div>
             </div>
-
-            {error && (
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-red-600/90 text-white px-8 py-4 rounded-full shadow-2xl flex items-center space-x-3 backdrop-blur-sm animate-bounce-short">
-                    <AlertTriangle size={24} />
-                    <span className="font-medium">{error}</span>
-                </div>
-            )}
         </div>
     );
 };

@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "@huggingface/inference": "^4.13.11",
+    "@langchain/core": "^1.1.19",
+    "@langchain/groq": "^1.0.4",
     "axios": "^1.13.4",
+    "groq-sdk": "^0.37.0",
+    "langchain": "^1.2.18",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

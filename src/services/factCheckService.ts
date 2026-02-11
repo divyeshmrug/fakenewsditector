@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const GOOGLE_API_KEY = 'AIzaSyCpzcBs1oOjq59sGOzTlU_GeM2KYqXjGRk';
+const GOOGLE_API_KEY = import.meta.env.VITE_CHECK_API_KEY;
 const BASE_URL = 'https://factchecktools.googleapis.com/v1alpha1/claims:search';
 
 export interface FactCheckResult {
@@ -13,12 +13,14 @@ export interface FactCheckResult {
     url?: string;
 }
 
-export const checkGoogleFacts = async (query: string): Promise<FactCheckResult> => {
+export const checkFacts = async (query: string, apiKey?: string): Promise<FactCheckResult> => {
     try {
-        console.log(`Checking Google Facts for: "${query}"`);
+        console.log(`Validating Database for: "${query}"`);
+        const token = apiKey || GOOGLE_API_KEY;
+
         const response = await axios.get(BASE_URL, {
             params: {
-                key: GOOGLE_API_KEY,
+                key: token,
                 query: query,
                 languageCode: 'en-US'
             }
@@ -45,7 +47,7 @@ export const checkGoogleFacts = async (query: string): Promise<FactCheckResult> 
         return { found: false };
 
     } catch (error: any) {
-        console.warn('Google Fact Check API failed:', error.message);
+        console.warn('Validation API failed:', error.message);
         return { found: false };
     }
 };

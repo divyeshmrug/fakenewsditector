@@ -25,11 +25,14 @@ const Layout = () => {
                             <div className="flex items-center space-x-6">
                                 <div className="flex flex-col items-end">
                                     <span className="text-sm text-gray-400">Welcome, {userRole === 'admin' ? 'Admin' : 'User'}</span>
-                                    {userRole === 'admin' && (
-                                        <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded border border-purple-500/50">
-                                            Admin Access
-                                        </span>
-                                    )}
+                                    <div className="flex items-center space-x-4 mt-1">
+                                        <Link to="/settings" className="text-xs text-cyan-400 hover:text-cyan-300 font-bold uppercase tracking-widest">Settings</Link>
+                                        {userRole === 'admin' && (
+                                            <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded border border-purple-500/50 uppercase font-black">
+                                                Admin
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <button
                                     onClick={handleLogout}
@@ -56,7 +59,7 @@ const Layout = () => {
             </main>
 
             <footer className="bg-gray-800 border-t border-gray-700 py-6 text-center text-gray-500 text-sm">
-                <p>&copy; {new Date().getFullYear()} Veritas AI. Powered by Hugging Face.</p>
+                <p>&copy; {new Date().getFullYear()} Veritas AI. All Rights Reserved.</p>
             </footer>
         </div>
     );
