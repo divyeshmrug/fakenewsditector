@@ -1,20 +1,12 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
+import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Layout from './layouts/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Settings from './pages/Settings';
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  return <>{children}</>;
-};
 
 function App() {
   return (
@@ -26,20 +18,32 @@ function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
+
               <Route
                 path="dashboard"
                 element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
+                  <>
+                    <SignedIn>
+                      <Dashboard />
+                    </SignedIn>
+                    <SignedOut>
+                      <RedirectToSignIn />
+                    </SignedOut>
+                  </>
                 }
               />
+
               <Route
                 path="settings"
                 element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
+                  <>
+                    <SignedIn>
+                      <Settings />
+                    </SignedIn>
+                    <SignedOut>
+                      <RedirectToSignIn />
+                    </SignedOut>
+                  </>
                 }
               />
             </Route>

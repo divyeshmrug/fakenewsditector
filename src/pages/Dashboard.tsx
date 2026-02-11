@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth as useClerk } from '@clerk/clerk-react';
 import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../services/secureApi';
+// ... other imports ...
 import { checkFacts, type FactCheckResult } from '../services/factCheckService';
 import { fetchNews, type NewsResult } from '../services/newsService';
 import { fetchAlternativeNews, fetchAlternativeWeb, type AlternativeSearchResult } from '../services/searchService';
+import { saveChat, fetchChatHistory, checkCache, type ChatRecord } from '../services/chatService';
 import { useSettings } from '../context/SettingsContext';
-import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper } from 'lucide-react';
+import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History } from 'lucide-react';
 
 const Dashboard = () => {
+    const { getToken } = useClerk();
     const { keys } = useSettings();
+    // ... state ...
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -15,6 +20,17 @@ const Dashboard = () => {
     const [newsData, setNewsData] = useState<NewsResult | null>(null);
     const [altData, setAltData] = useState<AlternativeSearchResult | null>(null);
     const [error, setError] = useState('');
+    const [history, setHistory] = useState<ChatRecord[]>([]);
+
+    useEffect(() => {
+        loadHistory();
+    }, []);
+
+    const loadHistory = async () => {
+        const token = await getToken();
+        const data = await fetchChatHistory(token || undefined);
+        setHistory(data);
+    };
 
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,6 +44,23 @@ const Dashboard = () => {
         setAltData(null);
 
         try {
+            const token = await getToken();
+
+            // 0. CHECK CACHE FIRST to save API limits
+            const cachedResult = await checkCache(text, token || undefined);
+            if (cachedResult) {
+                console.log("Using cached result for:", text);
+                setResult({
+                    label: cachedResult.label as any,
+                    score: cachedResult.score,
+                    reason: cachedResult.reason + " (Cached Result)"
+                });
+                setFactCheck(cachedResult.factCheck || null);
+                setLoading(false);
+                return;
+            }
+
+            // ... verification logic ...
             // 1. Check Official Database first
             const databaseResult = await checkFacts(text, keys.check);
             setFactCheck(databaseResult);
@@ -70,6 +103,20 @@ const Dashboard = () => {
             // 4. Run AI Analysis with Enhanced Context
             const aiData = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME);
             setResult(aiData);
+
+            // 5. Save to MongoDB
+            try {
+                await saveChat({
+                    text,
+                    label: aiData.label,
+                    score: aiData.score,
+                    reason: aiData.reason,
+                    factCheck: databaseResult.found ? databaseResult : undefined
+                }, token || undefined);
+                loadHistory(); // Refresh history
+            } catch (saveErr) {
+                console.error('Failed to save to history:', saveErr);
+            }
 
         } catch (err: any) {
             console.error('Analysis Flow Error:', err);
@@ -214,6 +261,51 @@ const Dashboard = () => {
                         <div className="mt-6 p-5 bg-red-950/30 border border-red-500/30 rounded-2xl text-red-300 text-sm flex items-center max-w-lg shadow-2xl animate-shake">
                             <AlertTriangle size={20} className="mr-3 flex-shrink-0 text-red-500" />
                             <span className="font-bold tracking-tight">{error}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* History Section */}
+            <div className="w-full max-w-[1600px] mt-12 bg-gray-800/30 backdrop-blur-sm rounded-3xl p-8 border border-gray-700/30">
+                <div className="flex items-center mb-6 text-cyan-400">
+                    <History className="mr-3" size={24} />
+                    <h2 className="text-2xl font-black uppercase tracking-widest">Analysis History</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {history.length > 0 ? (
+                        history.map((chat) => (
+                            <div
+                                key={chat._id}
+                                onClick={() => {
+                                    setText(chat.text);
+                                    setResult({ label: chat.label as any, score: chat.score, reason: chat.reason });
+                                    setFactCheck(chat.factCheck || null);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                                className="bg-gray-900/50 border border-gray-700/50 p-6 rounded-2xl cursor-pointer hover:border-cyan-500/50 transition-all group"
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className={`text-xs font-black uppercase tracking-widest ${getResultColor(chat.label)}`}>
+                                        {chat.label}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500 font-bold uppercase">
+                                        {chat.createdAt ? new Date(chat.createdAt).toLocaleDateString() : 'Recent'}
+                                    </span>
+                                </div>
+                                <p className="text-gray-200 text-sm font-medium line-clamp-2 mb-3">
+                                    "{chat.text}"
+                                </p>
+                                <div className="flex items-center text-gray-400 text-[10px] font-black uppercase tracking-tighter group-hover:text-cyan-400 transition-colors">
+                                    Load Full Analysis →
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="col-span-full py-12 text-center text-gray-600 border-2 border-dashed border-gray-700/30 rounded-3xl">
+                            <Clock size={48} className="mx-auto mb-4 opacity-20" />
+                            <p className="font-bold uppercase tracking-widest text-xs">No analysis records yet</p>
                         </div>
                     )}
                 </div>
