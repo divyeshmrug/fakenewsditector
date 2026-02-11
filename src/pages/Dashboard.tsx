@@ -10,8 +10,7 @@ import { useSettings } from '../context/SettingsContext';
 import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History } from 'lucide-react';
 
 const Dashboard = () => {
-    // Temporarily make Clerk optional
-    const { getToken } = useClerk() || { getToken: async () => null };
+    const { getToken } = useClerk();
     const { keys } = useSettings();
     // ... state ...
     const [text, setText] = useState('');
