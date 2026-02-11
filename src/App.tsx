@@ -19,11 +19,6 @@ function App() {
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
 
-              {/* TEMPORARILY DISABLED CLERK - Direct access for development */}
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="settings" element={<Settings />} />
-
-              {/* Original Clerk-protected routes (commented out for now)
               <Route
                 path="dashboard"
                 element={
@@ -37,6 +32,7 @@ function App() {
                   </>
                 }
               />
+
               <Route
                 path="settings"
                 element={
@@ -50,7 +46,6 @@ function App() {
                   </>
                 }
               />
-              */}
             </Route>
           </Routes>
         </AuthProvider>
