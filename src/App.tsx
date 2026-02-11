@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
+// Temporarily disabled Clerk authentication
+// import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Layout from './layouts/Layout';
@@ -19,6 +20,11 @@ function App() {
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
 
+              {/* TEMPORARILY DISABLED CLERK - Direct access for development */}
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="settings" element={<Settings />} />
+
+              {/* Original Clerk-protected routes (commented out for now)
               <Route
                 path="dashboard"
                 element={
@@ -32,7 +38,6 @@ function App() {
                   </>
                 }
               />
-
               <Route
                 path="settings"
                 element={
@@ -46,6 +51,7 @@ function App() {
                   </>
                 }
               />
+              */}
             </Route>
           </Routes>
         </AuthProvider>
