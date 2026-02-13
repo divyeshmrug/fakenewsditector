@@ -5,6 +5,7 @@ export interface IChat extends Document {
     label: string;
     score: number;
     reason: string;
+    userId: string;
     factCheck?: {
         found: boolean;
         text: string;
@@ -20,6 +21,7 @@ const ChatSchema: Schema = new Schema({
     label: { type: String, required: true },
     score: { type: Number, required: true },
     reason: { type: String, required: true },
+    userId: { type: String, required: true, index: true },
     factCheck: {
         found: { type: Boolean, default: false },
         text: { type: String },

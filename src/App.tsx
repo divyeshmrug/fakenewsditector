@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/clerk-react';
 import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import Layout from './layouts/Layout';
@@ -21,30 +20,12 @@ function App() {
 
               <Route
                 path="dashboard"
-                element={
-                  <>
-                    <SignedIn>
-                      <Dashboard />
-                    </SignedIn>
-                    <SignedOut>
-                      <RedirectToSignIn />
-                    </SignedOut>
-                  </>
-                }
+                element={<Dashboard />}
               />
 
               <Route
                 path="settings"
-                element={
-                  <>
-                    <SignedIn>
-                      <Settings />
-                    </SignedIn>
-                    <SignedOut>
-                      <RedirectToSignIn />
-                    </SignedOut>
-                  </>
-                }
+                element={<Settings />}
               />
             </Route>
           </Routes>

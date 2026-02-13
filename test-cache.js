@@ -4,7 +4,8 @@ const testData = {
     text: "Test Query for Caching",
     label: "TRUE",
     score: 95,
-    reason: "This is a test reason for caching verification."
+    reason: "This is a test reason for caching verification.",
+    userId: "test_user_123"
 };
 
 console.log("⏳ Testing SQLite Storage...");
