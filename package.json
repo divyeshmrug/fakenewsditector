@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "api-server": "npx tsx local-api-server.ts",
-    "sync-db": "npx tsx scripts/sync-sqlite-to-mongo.ts",
+    "sync:push": "npx tsx scripts/sync-sqlite-to-mongo.ts",
+    "sync:pull": "npx tsx scripts/sync-mongo-to-sqlite.ts",
+    "sync-db": "npm run sync:push",
     "test-faq": "npx tsx test_faq_direct.ts",
     "dev:all": "npm run api-server & npm run dev",
     "build": "tsc -b && vite build",

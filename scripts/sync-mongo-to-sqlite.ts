@@ -81,6 +81,40 @@ async function syncToSqlite() {
         userTx(users);
         console.log(`✅ Synced ${userCount} users.`);
 
+
+        // --- SYNC CHATS ---
+        console.log('💬 Syncing Chat History...');
+        // We need to fetch chat history. Note: Chat model might not be imported yet.
+        // Let's import it dynamically or assume the schema matches locally.
+        const chats = await mongoose.connection.collection('chats').find({}).toArray();
+        console.log(`📂 Found ${chats.length} chats in MongoDB.`);
+
+        const insertChat = db.prepare(`
+            INSERT OR REPLACE INTO user_chats (id, userId, text, label, score, reason, factCheck, base64Image, imageHash, createdAt)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        let chatCount = 0;
+        const chatTx = db.transaction((chatList) => {
+            for (const c of chatList) {
+                insertChat.run(
+                    c._id.toString(),
+                    c.userId,
+                    c.text,
+                    c.label,
+                    c.score,
+                    c.reason,
+                    JSON.stringify(c.factCheck),
+                    c.base64Image || null,
+                    c.imageHash || null,
+                    c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()
+                );
+                chatCount++;
+            }
+        });
+        chatTx(chats);
+        console.log(`✅ Synced ${chatCount} chats.`);
+
         // --- SYNC FACTS ---
         console.log('🧠 Syncing Fact Checks...');
         const facts = await FactCheck.find({}).lean();
@@ -123,6 +157,7 @@ async function syncToSqlite() {
 
         console.log(`\n\n🎉 Reverse Sync Complete!`);
         console.log(`✅ Users Synced: ${userCount}`);
+        console.log(`✅ Chats Synced: ${chatCount}`);
         console.log(`✅ Facts Synced: ${syncedCount}`);
 
     } catch (error) {
