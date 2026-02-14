@@ -1,31 +1,32 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Logo from '../components/Logo';
-import { Mail, Lock, Key, ArrowRight, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 const ForgotPassword = () => {
-    // const navigate = useNavigate(); // Removed unused
-    const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password, 3: Success
+    // const navigate = useNavigate();
+    const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [error, setError] = useState('');
-    // const [message, setMessage] = useState(''); // Removed unused
+    const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSendCode = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setMessage('');
         setLoading(true);
 
         try {
             await axios.post('http://localhost:3001/api/auth/forgot-password', { email });
-            // setMessage('Verification code sent! Check your email.');
+            setMessage('Verification code sent! Please checks your email.');
             setStep(2);
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to send verification code.');
+            setError(err.response?.data?.message || 'Failed to send code');
         } finally {
             setLoading(false);
         }
@@ -34,6 +35,7 @@ const ForgotPassword = () => {
     const handleResetPassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setMessage('');
         setLoading(true);
 
         try {
@@ -42,169 +44,111 @@ const ForgotPassword = () => {
                 otp,
                 newPassword
             });
-            setStep(3);
+            setMessage('Password reset successful! Redirecting to login...');
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000);
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Failed to reset password. Check your code.');
+            setError(err.response?.data?.message || 'Failed to reset password');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 relative overflow-hidden">
-            {/* Background elements */}
+        <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900">
             <div className="absolute inset-0 bg-cover bg-center z-0 opacity-20" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')" }}></div>
-            <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 via-gray-900/50 to-gray-900 z-0"></div>
-
-            <div className="z-10 mb-8 flex flex-col items-center animate-fade-in-down">
-                <Logo size={60} className="mb-6 drop-shadow-[0_0_30px_rgba(34,211,238,0.6)]" />
-                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-indigo-500">
-                    Recover Account
-                </h1>
+            <div className="z-10 mb-8 flex flex-col items-center">
+                <Logo size={60} className="mb-4 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]" />
+                <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">Recover Account</h1>
             </div>
 
-            <div className="z-10 bg-gray-900/60 backdrop-blur-2xl p-8 rounded-3xl shadow-2xl border border-gray-700/50 max-w-md w-full mx-4 transition-all duration-300 transform hover:scale-[1.01]">
+            <div className="z-10 bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-gray-700/50 max-w-md w-full mx-4">
 
-                {/* Step 1: Request Code */}
-                {step === 1 && (
+                {step === 1 ? (
                     <>
-                        <p className="text-gray-400 text-center mb-8 text-sm leading-relaxed">
-                            Enter your email address properly. We will send you a secure verification code to reset your password.
+                        <p className="text-gray-400 text-center mb-6 text-sm">
+                            Enter your email address to receive a verification code.
                         </p>
+                        {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-center text-sm">{error}</div>}
+                        {message && <div className="bg-green-500/20 text-green-300 p-3 rounded-lg mb-4 text-center text-sm">{message}</div>}
 
-                        <form onSubmit={handleSendCode} className="space-y-6">
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-cyan-400 transition-colors" />
-                                </div>
+                        <form onSubmit={handleSendCode} className="space-y-4">
+                            <div>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
-                                    placeholder="name@example.com"
+                                    className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                                    placeholder="Enter your email"
                                 />
                             </div>
-
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-4 px-4 rounded-xl transition-all duration-300 shadow-lg shadow-cyan-900/20 uppercase tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+                                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 px-4 rounded-xl transition duration-300 shadow-lg shadow-cyan-900/30 uppercase tracking-widest text-sm mt-4 disabled:opacity-50"
                             >
-                                {loading ? (
-                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        Send Verification Code <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                                    </>
-                                )}
+                                {loading ? 'Sending...' : 'Send Reset Code'}
                             </button>
                         </form>
                     </>
-                )}
-
-                {/* Step 2: Verify & Reset */}
-                {step === 2 && (
+                ) : (
                     <>
-                        <div className="mb-6 bg-cyan-500/10 border border-cyan-500/20 rounded-xl p-4 flex items-start gap-3">
-                            <CheckCircle className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
+                        <p className="text-gray-400 text-center mb-6 text-sm">
+                            Enter the code sent to <strong>{email}</strong> and your new password.
+                        </p>
+                        {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-center text-sm">{error}</div>}
+                        {message && <div className="bg-green-500/20 text-green-300 p-3 rounded-lg mb-4 text-center text-sm">{message}</div>}
+
+                        <form onSubmit={handleResetPassword} className="space-y-4">
                             <div>
-                                <h3 className="text-cyan-300 font-semibold text-sm">Code Sent!</h3>
-                                <p className="text-cyan-200/70 text-xs mt-1">Check <strong>{email}</strong> for your 6-digit code.</p>
+                                <label className="block text-gray-400 text-xs uppercase font-bold mb-2 ml-1">Verification Code</label>
+                                <input
+                                    type="text"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    required
+                                    className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors tracking-widest text-center font-mono text-xl"
+                                    placeholder="000000"
+                                    maxLength={6}
+                                />
                             </div>
-                        </div>
-
-                        <form onSubmit={handleResetPassword} className="space-y-5">
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-400 ml-1 uppercase tracking-wider">Verification Code</label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Key className="h-5 w-5 text-gray-400 group-focus-within:text-cyan-400 transition-colors" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={otp}
-                                        onChange={(e) => setOtp(e.target.value)}
-                                        required
-                                        className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono tracking-widest text-lg"
-                                        placeholder="000000"
-                                        maxLength={6}
-                                    />
-                                </div>
+                            <div>
+                                <label className="block text-gray-400 text-xs uppercase font-bold mb-2 ml-1">New Password</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    required
+                                    className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                                    placeholder="New Password"
+                                    minLength={6}
+                                />
                             </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-semibold text-gray-400 ml-1 uppercase tracking-wider">New Password</label>
-                                <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-cyan-400 transition-colors" />
-                                    </div>
-                                    <input
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        required
-                                        className="w-full bg-gray-800/50 border border-gray-700 rounded-xl pl-12 pr-4 py-4 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
-                                        placeholder="••••••••"
-                                        minLength={6}
-                                    />
-                                </div>
-                            </div>
-
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-4 px-4 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-900/20 uppercase tracking-widest text-sm disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+                                className="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black py-4 px-4 rounded-xl transition duration-300 shadow-lg shadow-cyan-900/30 uppercase tracking-widest text-sm mt-4 disabled:opacity-50"
                             >
-                                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Reset Password'}
+                                {loading ? 'Updating...' : 'Set New Password'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="w-full text-gray-500 hover:text-gray-300 text-xs uppercase tracking-wider py-2"
+                            >
+                                Change Email
                             </button>
                         </form>
-
-                        <div className="mt-6 text-center">
-                            <button
-                                onClick={() => setStep(1)}
-                                className="text-gray-500 hover:text-gray-300 text-xs transition-colors"
-                            >
-                                Wrong email? Try again
-                            </button>
-                        </div>
                     </>
                 )}
 
-                {/* Step 3: Success */}
-                {step === 3 && (
-                    <div className="text-center py-4">
-                        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-green-500/10">
-                            <CheckCircle className="h-10 w-10 text-green-400" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">Password Reset!</h2>
-                        <p className="text-gray-400 mb-8">Your password has been securely updated. You can now log in with your new credentials.</p>
-
-                        <Link
-                            to="/login"
-                            className="block w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-4 px-4 rounded-xl transition-all border border-gray-600 hover:border-gray-500"
-                        >
-                            Return to Login
-                        </Link>
-                    </div>
-                )}
-
-                {/* Error Message */}
-                {error && (
-                    <div className="mt-6 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-center text-sm flex items-center justify-center gap-2 animate-pulse">
-                        <AlertCircle className="h-4 w-4" /> {error}
-                    </div>
-                )}
-
-                {/* Back to Login Link (Bottom) */}
-                {step !== 3 && (
-                    <div className="mt-8 pt-6 border-t border-gray-800 text-center">
-                        <Link to="/login" className="text-gray-400 hover:text-cyan-400 text-sm transition-colors flex items-center justify-center gap-2 group">
-                            Back to Login
-                        </Link>
-                    </div>
-                )}
+                <div className="mt-6 text-center">
+                    <Link to="/login" className="text-gray-400 hover:text-white text-sm transition-colors">
+                        Back to Login
+                    </Link>
+                </div>
             </div>
         </div>
     );
