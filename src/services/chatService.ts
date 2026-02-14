@@ -4,6 +4,8 @@ import type { FactCheckResult } from './factCheckService';
 export interface ChatRecord {
     _id?: string;
     text: string;
+    base64Image?: string;  // Store image data
+    imageHash?: string;     // MD5 hash for cache matching
     label: string;
     score: number;
     reason: string;
@@ -53,6 +55,20 @@ export const checkCache = async (text: string, token?: string): Promise<ChatReco
         return result;
     } catch (error) {
         console.error('Failed to check cache:', error);
+        return null;
+    }
+};
+
+export const checkImageCache = async (imageHash: string, token?: string): Promise<ChatRecord | null> => {
+    try {
+        const response = await axios.get(`/api/chats?imageHash=${encodeURIComponent(imageHash)}`, {
+            headers: getHeaders(token)
+        });
+        const result = response.data.data;
+        // Return cached image result if found
+        return result;
+    } catch (error) {
+        console.error('Failed to check image cache:', error);
         return null;
     }
 };

@@ -2,6 +2,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IChat extends Document {
     text: string;
+    base64Image?: string;  // Store image data for caching
+    imageHash?: string;     // MD5 hash for quick duplicate detection
     label: string;
     score: number;
     reason: string;
@@ -18,6 +20,8 @@ export interface IChat extends Document {
 
 const ChatSchema: Schema = new Schema({
     text: { type: String, required: true },
+    base64Image: { type: String },  // Store base64 encoded image
+    imageHash: { type: String, index: true },  // MD5 hash for fast lookup
     label: { type: String, required: true },
     score: { type: Number, required: true },
     reason: { type: String, required: true },

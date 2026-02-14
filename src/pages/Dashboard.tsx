@@ -5,7 +5,8 @@ import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../
 import { checkFacts, type FactCheckResult } from '../services/factCheckService';
 import { fetchNews, type NewsResult } from '../services/newsService';
 import { fetchAlternativeNews, fetchAlternativeWeb, type AlternativeSearchResult } from '../services/searchService';
-import { saveChat, fetchChatHistory, checkCache, type ChatRecord } from '../services/chatService';
+import { saveChat, fetchChatHistory, checkCache, checkImageCache, type ChatRecord } from '../services/chatService';
+import { generateImageHash } from '../utils/imageUtils';
 import { useSettings } from '../context/SettingsContext';
 import { extractTextFromImage } from '../services/ocrService';
 import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History, Image as ImageIcon } from 'lucide-react';
@@ -51,8 +52,24 @@ const Dashboard = () => {
         try {
             const token = await getToken();
 
-            // 0. CHECK CACHE FIRST to save API limits (Only if no image is being analyzed)
-            if (!base64Image) {
+            // 0. CHECK CACHE FIRST to save API limits
+            if (base64Image) {
+                // Check image cache using hash
+                const imageHash = generateImageHash(base64Image);
+                const cachedImageResult = await checkImageCache(imageHash, token || undefined);
+                if (cachedImageResult) {
+                    console.log("Using cached result for image with hash:", imageHash);
+                    setResult({
+                        label: cachedImageResult.label as any,
+                        score: cachedImageResult.score,
+                        reason: cachedImageResult.reason + " (Cached Image Result)"
+                    });
+                    setFactCheck(cachedImageResult.factCheck || null);
+                    setLoading(false);
+                    return;
+                }
+            } else if (text.trim()) {
+                // Check text cache
                 const cachedResult = await checkCache(text, token || undefined);
                 if (cachedResult) {
                     console.log("Using cached result for:", text);
@@ -108,21 +125,24 @@ const Dashboard = () => {
             }
 
             // 4. Run AI Analysis with Enhanced Context & Vision
-            const aiData = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME, base64Image || undefined);
-            setResult(aiData);
+            const aiResult = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME, base64Image || undefined);
+            setResult(aiResult);
 
-            // 5. Save to MongoDB
+            // 4. Save to History (with image if present)
             try {
+                const imageHash = base64Image ? generateImageHash(base64Image) : undefined;
                 await saveChat({
-                    text,
-                    label: aiData.label,
-                    score: aiData.score,
-                    reason: aiData.reason,
-                    factCheck: databaseResult.found ? databaseResult : undefined
+                    text: text || "Image Analysis",
+                    base64Image: base64Image || undefined,
+                    imageHash: imageHash,
+                    label: aiResult.label,
+                    score: aiResult.score,
+                    reason: aiResult.reason,
+                    factCheck: databaseResult
                 }, token || undefined);
-                loadHistory(); // Refresh history
-            } catch (saveErr) {
-                console.error('Failed to save to history:', saveErr);
+                await loadHistory();
+            } catch (saveError) {
+                console.error("Failed to save to history:", saveError);
             }
 
         } catch (err: any) {

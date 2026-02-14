@@ -36,7 +36,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     switch (method) {
         case 'GET':
             try {
-                // Support for cache check (?q=normalized_text)
+                // Support for image hash cache check (?imageHash=hash_value)
+                if (query.imageHash) {
+                    const hashToSearch = query.imageHash as string;
+
+                    // Check MongoDB for cached image analysis
+                    let cachedImageInMongo = null;
+                    if (isDbConnected) {
+                        cachedImageInMongo = await Chat.findOne({ imageHash: hashToSearch, userId });
+                    }
+
+                    if (cachedImageInMongo) {
+                        return res.status(200).json({ success: true, data: cachedImageInMongo, source: 'mongodb-image-cache' });
+                    }
+
+                    return res.status(200).json({ success: true, data: null });
+                }
+
+                // Support for text cache check (?q=normalized_text)
                 if (query.q) {
                     const textToSearch = query.q as string;
 
