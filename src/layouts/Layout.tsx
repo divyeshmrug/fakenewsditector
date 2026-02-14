@@ -1,15 +1,13 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-// import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { LogOut } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useTranslation } from 'react-i18next';
 
 const Layout = () => {
-    // const { isAuthenticated, userRole, logout } = useAuth();
-    // For Dev/Bypass Mode:
-    const isAuthenticated = true;
-    const userRole = 'admin';
-    const logout = () => { console.log('Mock Logout'); };
+    const { isAuthenticated, logout, user } = useAuth();
+    // const userRole = user?.role || 'user'; // Assuming user object has role, otherwise default
+    const userRole = 'user'; // Defaulting for now as User interface in AuthContext might not have role
     const navigate = useNavigate();
     const { t } = useTranslation();
 
