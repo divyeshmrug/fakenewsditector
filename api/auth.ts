@@ -4,7 +4,7 @@ import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import User from '../src/models/User';
 import { saveUserToSQLite } from '../src/lib/sqlite';
-import { sendOTP, sendMail } from '../src/lib/mail';
+import { sendOTP, sendMail, sendWelcomeEmail, sendPasswordResetEmail } from '../src/lib/mail';
 import dbConnect from '../src/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-this';
@@ -91,19 +91,7 @@ export const verify = async (req: Request, res: Response) => {
         }
 
         // Send Welcome Email
-        await sendMail(
-            email,
-            'Welcome to Axiant Intelligence',
-            `Welcome ${user.username}! Your account has been verified.`,
-            `<div style="font-family: Arial;">
-                <h1 style="color: #0ea5e9;">Welcome to Axiant Intelligence!</h1>
-                <p>Hi <strong>${user.username}</strong>,</p>
-                <p>Your account has been successfully verified. You now have full access to our deepfake detection tools.</p>
-                <p>Get started by analyzing your first news article.</p>
-                <br>
-                <p>Best regards,<br>The Axiant Team</p>
-             </div>`
-        );
+        await sendWelcomeEmail(user.email, user.username);
 
         res.json({ success: true, message: 'Email verified successfully' });
     } catch (error) {
@@ -165,7 +153,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
         user.resetTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
         await user.save();
 
-        await sendOTP(email, otp);
+        await sendPasswordResetEmail(email, otp);
 
         res.json({ success: true, message: 'Password reset OTP sent to email' });
     } catch (error) {
