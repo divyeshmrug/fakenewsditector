@@ -1,31 +1,29 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClerkClient } from '@clerk/backend';
+import jwt from 'jsonwebtoken';
 import dbConnect from '../src/lib/mongodb';
 import Chat from '../src/models/Chat';
 import { saveToSQLite, findInSQLite, getHistoryFromSQLite } from '../src/lib/sqlite';
 
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-this';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     let userId: string | null = null;
+
+    // Verify JWT Token from Custom Auth
     try {
-        const authRequest = {
-            url: `https://${req.headers.host}${req.url}`,
-            method: req.method!,
-            headers: new Headers(req.headers as any),
-        };
-        const authState = await clerk.authenticateRequest(authRequest as any);
-        if (authState.status === 'signed-in') {
-            userId = authState.toAuth().userId;
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            const decoded = jwt.verify(token, JWT_SECRET) as any;
+            userId = decoded.userId;
         }
     } catch (err) {
-        console.error('Auth verification failed:', err);
+        console.error('Token verification failed:', err);
     }
 
     if (!userId) {
-        // Fallback for demo/guest mode
+        // Fallback for demo/guest mode if validation fails or no token
         userId = 'guest-user-123';
-        // return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
     const { method, query } = req;
