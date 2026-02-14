@@ -28,27 +28,6 @@ i18n
                     settings: "Settings"
                 }
             },
-            hi: {
-                translation: {
-                    app_title: "एक्सिएंट ऑथेंटिसिटी इंजन",
-                    verify_now: "अभी जाँचें",
-                    analyzing: "जाँच हो रही है...",
-                    placeholder: "गहन विश्लेषण के लिए समाचार टेक्स्ट या दावा यहां पेस्ट करें...",
-                    recent_checks: "हालिया इंटेलिजेंस चेक",
-                    logout: "लॉगआउट",
-                    login_title: "एक्सिएंट इंटेलिजेंस",
-                    login_subtitle: "एंटरप्राइज-ग्रेड फेक न्यूज डिटेक्शन",
-                    demo_login: "डेमो यूजर के रूप में साइन इन करें",
-                    result_true: "सत्य",
-                    result_false: "असत्य",
-                    result_misleading: "भ्रामक",
-                    result_unverified: "असत्यापित",
-                    reasoning: "तर्क",
-                    confidence: "आत्मविश्वास",
-                    fact_check: "तथ्य जाँच डेटा",
-                    settings: "सेटिंग्स"
-                }
-            }
         },
         fallbackLng: "en",
         interpolation: {

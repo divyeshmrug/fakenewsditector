@@ -1,53 +1,20 @@
 import { ChatGroq as GenericModel } from "@langchain/groq";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { JsonOutputParser } from "@langchain/core/output_parsers";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import type { AnalysisResult } from './modelService';
 export type { AnalysisResult };
 
 const SECURE_API_KEY = import.meta.env.VITE_AI_API_KEY;
 const MODEL_NAME = import.meta.env.VITE_AI_MODEL_NAME;
 
-// Initialize Analysis Engine
-// const model = new GenericModel({ ... }); // Removed global instance to prevent startup crash
+// Note: Legacy prompt/parser removed for manual multi-modal implementation
 
-
-// Define the structured output parser
-const parser = new JsonOutputParser<any>();
-
-// Define the prompt template
-const prompt = ChatPromptTemplate.fromMessages([
-    ["system", `You are an expert news analyst. Your task is to classify news text into one of the following categories:
-    1. 'Scientific Fact' - For established scientific consensus.
-    2. 'Verified Real News' - For consistent, reliable reporting.
-    3. 'General Knowledge' - For widely accepted facts (historical, geographical, identities of public figures, etc.).
-    4. 'Proven Fake News' - For known disinformation or conspiracy theories.
-    5. 'Misleading or Clickbait' - For deceptive contexts.
-    6. 'Unverified Rumor or Opinion' - For lacking sufficient evidence.
-
-    Instructions:
-    - Ignore minor typos or grammatical errors if the intent is clear (e.g., "gujrat" -> "Gujarat").
-    - **General Knowledge Priority**: If the input is a widely accepted fact (e.g., "Elon Musk is the CEO of Tesla"), classify it as 'General Knowledge' (TRUE) even if the provided NEWS CONTEXT doesn't explicitly mention it. Only change this to 'Proven Fake News' if the context explicitly DEBUNKS the fact.
-    - **Context Usage**: Use the provided NEWS CONTEXT to verify recent or controversial claims. If articles CONFIRM a claim, use 'Verified Real News'. If articles DEBUNK a claim, use 'Proven Fake News'.
-    
-    {context_section}
-
-    You must also provide a confidence score (0-100) and a brief reason.
-
-    Respond ONLY in JSON format like this:
-    {{
-        "label": "CATEGORY_NAME",
-        "score": NUMBER,
-        "reason": "BRIEF_EXPLANATION"
-    }}`],
-    ["user", "Analyze this text: \"{text}\""]
-]);
-
-export const detectFakeNewsWithAI = async (text: string, context?: string, apiKey?: string, modelName?: string): Promise<AnalysisResult> => {
+export const detectFakeNewsWithAI = async (text: string, context?: string, apiKey?: string, modelName?: string, base64Image?: string): Promise<AnalysisResult> => {
     try {
-        console.log("Analyzing with AI Core:", text);
+        console.log("Analyzing with AI Core:", text || "Direct Image Analysis");
 
         const token = apiKey || SECURE_API_KEY;
-        const selectedModel = modelName || MODEL_NAME;
+        // Use Llama 4 Scout (Current Groq Vision standard in Feb 2026)
+        const selectedModel = base64Image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : (modelName || MODEL_NAME);
 
         if (!token) {
             return {
@@ -73,24 +40,54 @@ export const detectFakeNewsWithAI = async (text: string, context?: string, apiKe
         ${context}
         ` : '';
 
-        // Create the chain
-        const chain = prompt.pipe(dynamicModel).pipe(parser);
+        // Construct multi-modal message if image exists
+        const userContent = base64Image ? [
+            { type: "text", text: text || "Analyze this image for authenticity. Determine if it contains misinformation, fake news, or manipulated content." },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+        ] : (text || "Analyze this claim.");
 
-        // Invoke the chain
-        const result = await chain.invoke({
-            text: text,
-            context_section: contextSection
-        });
+        // Create the chain manually for multi-modal support
+        const systemMsg = `You are the Axiant Intelligence Multi-Language Analysis Engine. 
+
+    STRICT INSTRUCTIONS:
+    1. **Identity**: You are Axiant Intelligence, not a generic assistant.
+    2. **Language Parity**: Use English by default. Only respond in Hindi or Hinglish if the user's input is clearly and predominantly in those languages.
+       - If the input is gibberish, symbols, or unclear OCR text, MUST respond in ENGLISH.
+    3. **JSON Keys & Labels**: The keys "label", "score", and "reason" MUST remain in English. The **"label"** value MUST be one of: 'TRUE', 'FALSE', 'MISLEADING'.
+    4. **Categorization**: Use ONLY 'TRUE', 'FALSE', or 'MISLEADING' for the label.
+
+    ${contextSection}
+
+    Respond ONLY in JSON format.`;
+
+        const messages = [
+            new SystemMessage(systemMsg),
+            new HumanMessage({ content: userContent as any })
+        ];
+
+        // Invoke the model
+        // Note: LangChain ChatGroq invoke handles vision models with content array
+        const response = await dynamicModel.invoke(messages);
+
+        // Parse the raw content from the response
+        let content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+
+        // Handle potential markdown code blocks in raw output
+        if (content.includes('```json')) {
+            content = content.split('```json')[1].split('```')[0].trim();
+        } else if (content.includes('```')) {
+            content = content.split('```')[1].split('```')[0].trim();
+        }
+
+        const result = JSON.parse(content);
 
         // Map labels to UI expected labels
         let finalLabel: AnalysisResult['label'] = 'UNVERIFIED';
-        const labelStr = result.label || '';
+        const labelStr = (result.label || '').toUpperCase();
 
-        if (labelStr.includes('Scientific Fact')) finalLabel = 'TRUE';
-        else if (labelStr.includes('Verified Real News')) finalLabel = 'TRUE';
-        else if (labelStr.includes('General Knowledge')) finalLabel = 'TRUE';
-        else if (labelStr.includes('Proven Fake News')) finalLabel = 'FALSE';
-        else if (labelStr.includes('Misleading')) finalLabel = 'MISLEADING';
+        if (labelStr.includes('TRUE')) finalLabel = 'TRUE';
+        else if (labelStr.includes('FALSE')) finalLabel = 'FALSE';
+        else if (labelStr.includes('MISLEADING')) finalLabel = 'MISLEADING';
         else finalLabel = 'UNVERIFIED';
 
         return {
@@ -100,11 +97,11 @@ export const detectFakeNewsWithAI = async (text: string, context?: string, apiKe
         };
 
     } catch (error: any) {
-        console.error('Core Analysis Failed:', error);
+        console.error('Core Analysis Failed Details:', error.message, error.response?.data || '');
         return {
             label: 'UNVERIFIED',
             score: 0,
-            reason: 'Unable to analyze text with AI. Please try again later.'
+            reason: `Error: ${error.message || 'Unable to analyze text with AI. Please try again later.'}`
         };
     }
 };

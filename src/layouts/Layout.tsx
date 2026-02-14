@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Globe } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useTranslation } from 'react-i18next';
 
@@ -11,17 +11,13 @@ const Layout = () => {
     const userRole = 'admin';
     const logout = () => { console.log('Mock Logout'); };
     const navigate = useNavigate();
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
 
     const handleLogout = () => {
         logout();
         navigate('/login');
     };
 
-    const toggleLanguage = () => {
-        const nextLng = i18n.language === 'en' ? 'hi' : 'en';
-        i18n.changeLanguage(nextLng);
-    };
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col font-sans">
@@ -33,13 +29,6 @@ const Layout = () => {
                     </Link>
 
                     <nav className="flex items-center space-x-6">
-                        <button
-                            onClick={toggleLanguage}
-                            className="flex items-center space-x-2 text-gray-400 hover:text-cyan-400 transition bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-700"
-                        >
-                            <Globe size={16} />
-                            <span className="text-xs font-black uppercase tracking-widest">{i18n.language === 'en' ? 'हिन्दी' : 'English'}</span>
-                        </button>
 
                         {isAuthenticated ? (
                             <div className="flex items-center space-x-6">

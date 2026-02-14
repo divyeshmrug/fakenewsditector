@@ -7,7 +7,8 @@ import { fetchNews, type NewsResult } from '../services/newsService';
 import { fetchAlternativeNews, fetchAlternativeWeb, type AlternativeSearchResult } from '../services/searchService';
 import { saveChat, fetchChatHistory, checkCache, type ChatRecord } from '../services/chatService';
 import { useSettings } from '../context/SettingsContext';
-import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History } from 'lucide-react';
+import { extractTextFromImage } from '../services/ocrService';
+import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History, Image as ImageIcon } from 'lucide-react';
 
 const Dashboard = () => {
     // const { getToken } = useClerk(); // Removed Clerk hook
@@ -17,6 +18,8 @@ const Dashboard = () => {
     // ... state ...
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
+    const [ocrLoading, setOcrLoading] = useState(false);
+    const [base64Image, setBase64Image] = useState<string | null>(null);
     const [result, setResult] = useState<AnalysisResult | null>(null);
     const [factCheck, setFactCheck] = useState<FactCheckResult | null>(null);
     const [newsData, setNewsData] = useState<NewsResult | null>(null);
@@ -36,7 +39,7 @@ const Dashboard = () => {
 
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!text.trim()) return;
+        if (!text.trim() && !base64Image) return;
 
         setLoading(true);
         setError('');
@@ -48,18 +51,20 @@ const Dashboard = () => {
         try {
             const token = await getToken();
 
-            // 0. CHECK CACHE FIRST to save API limits
-            const cachedResult = await checkCache(text, token || undefined);
-            if (cachedResult) {
-                console.log("Using cached result for:", text);
-                setResult({
-                    label: cachedResult.label as any,
-                    score: cachedResult.score,
-                    reason: cachedResult.reason + " (Cached Result)"
-                });
-                setFactCheck(cachedResult.factCheck || null);
-                setLoading(false);
-                return;
+            // 0. CHECK CACHE FIRST to save API limits (Only if no image is being analyzed)
+            if (!base64Image) {
+                const cachedResult = await checkCache(text, undefined);
+                if (cachedResult) {
+                    console.log("Using cached result for:", text);
+                    setResult({
+                        label: cachedResult.label as any,
+                        score: cachedResult.score,
+                        reason: cachedResult.reason + " (Cached Result)"
+                    });
+                    setFactCheck(cachedResult.factCheck || null);
+                    setLoading(false);
+                    return;
+                }
             }
 
             // ... verification logic ...
@@ -102,8 +107,8 @@ const Dashboard = () => {
                 aiContext += `\n--- SOURCE: GLOBAL MEDIA ---\nTitle: ${globalNews.topArticle.title}\nDescription: ${globalNews.topArticle.description}\n`;
             }
 
-            // 4. Run AI Analysis with Enhanced Context
-            const aiData = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME);
+            // 4. Run AI Analysis with Enhanced Context & Vision
+            const aiData = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME, base64Image || undefined);
             setResult(aiData);
 
             // 5. Save to MongoDB
@@ -129,12 +134,38 @@ const Dashboard = () => {
         }
     };
 
+    const clearImage = () => {
+        setBase64Image(null);
+    };
+
     const getResultColor = (label: string) => {
         switch (label) {
             case 'TRUE': return 'text-green-400';
             case 'FALSE': return 'text-red-400';
             case 'MISLEADING': return 'text-orange-400';
             default: return 'text-yellow-400';
+        }
+    };
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setOcrLoading(true);
+        try {
+            // Store base64 for Vision analysis
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = (reader.result as string).split(',')[1];
+                setBase64Image(base64String);
+            };
+            reader.readAsDataURL(file);
+
+            const extractedText = await extractTextFromImage(file);
+            setText(extractedText);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setOcrLoading(false);
         }
     };
 
@@ -163,17 +194,47 @@ const Dashboard = () => {
                         <Info className="mr-2" size={16} />
                         Input Content
                     </label>
-                    <textarea
-                        className="flex-grow w-full bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
-                        placeholder="Paste text or headline to verify..."
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                    />
+                    <div className="relative flex-grow mb-8 group">
+                        {base64Image && (
+                            <div className="absolute inset-0 z-20 bg-gray-900/90 flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-cyan-500/50 animate-reveal">
+                                <img
+                                    src={`data:image/jpeg;base64,${base64Image}`}
+                                    className="max-h-[70%] rounded-lg mb-4 shadow-2xl"
+                                    alt="Analysis target"
+                                    <span className="text-xs font-black uppercase tracking-widest text-cyan-400 bg-cyan-950 px-4 py-2 rounded-lg border border-cyan-500/30">
+                                        Vision AI Active
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                        <textarea
+                            className="w-full h-full bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
+                            placeholder={t('placeholder')}
+                            value={text}
+                            onChange={(e) => setText(e.target.value)}
+                        />
+                        <div className="absolute top-4 right-4 flex space-x-2">
+                            <input
+                                type="file"
+                                id="image-upload"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                            />
+                            <label
+                                htmlFor="image-upload"
+                                className="p-3 bg-gray-800/80 hover:bg-cyan-600/20 text-cyan-400 border border-gray-700 rounded-xl cursor-pointer transition-all flex items-center group/btn"
+                                title="Extract text from image"
+                            >
+                                {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />}
+                            </label>
+                        </div>
+                    </div>
                     <div className="mt-8 flex justify-end">
                         <button
                             onClick={handleAnalyze}
-                            disabled={loading || !text.trim()}
-                            className={`flex items-center space-x-3 px-10 py-4 rounded-2xl font-black text-lg transition-all transform active:scale-95 shadow-xl ${loading || !text.trim()
+                            disabled={loading || (!text.trim() && !base64Image)}
+                            className={`flex items-center space-x-3 px-10 py-4 rounded-2xl font-black text-lg transition-all transform active:scale-95 shadow-xl ${loading || (!text.trim() && !base64Image)
                                 ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
                                 : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-950/50 border border-cyan-400/30'
                                 }`}
@@ -183,7 +244,6 @@ const Dashboard = () => {
                                     <Loader2 className="animate-spin" size={24} />
                                     <span className="tracking-widest">ANALYZING</span>
                                 </>
-                            ) : (
                                 <>
                                     <Send size={24} />
                                     <span className="tracking-widest">VERIFY NOW</span>

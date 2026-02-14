@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const GNEWS_API_KEY = import.meta.env.VITE_NEWS_API_KEY;
+const GNEWS_API_KEY = import.meta.env.VITE_NEWS_API_KEY || import.meta.env.VITE_NEWSAPI_ORG_KEY;
 const NEWSAPI_ORG_KEY = import.meta.env.VITE_NEWSAPI_ORG_KEY;
 const SERPER_API_KEY = import.meta.env.VITE_SEARCH_API_KEY;
 const BRAVE_API_KEY = import.meta.env.VITE_WEB_API_KEY;
