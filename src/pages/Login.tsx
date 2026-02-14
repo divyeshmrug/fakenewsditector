@@ -30,7 +30,6 @@ const Login = () => {
                 setError(result.message || 'Login failed');
             }
         } catch (err: any) {
-            // Should be caught in login, but just in case
             setError(err.message || 'Login failed');
         } finally {
             setLoading(false);

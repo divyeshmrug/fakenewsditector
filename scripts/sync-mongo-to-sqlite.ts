@@ -1,76 +1,100 @@
 
-import 'dotenv/config';
+import Database from 'better-sqlite3';
+import path from 'path';
 import mongoose from 'mongoose';
-import dns from 'dns';
-import dbConnect from '../src/lib/mongodb';
-import Chat from '../src/models/Chat';
+import dotenv from 'dotenv';
 import FactCheck from '../src/models/FactCheck';
-import { saveToSQLite, saveFactCache } from '../src/lib/sqlite';
 
-// FIX: Force Google DNS
+// Load environment variables
+dotenv.config();
+
+import dns from 'dns';
+
+// Force usage of Google Public DNS
 try {
     dns.setServers(['8.8.8.8', '8.8.4.4']);
 } catch (e) {
-    console.error('Failed to set DNS servers:', e);
+    // Ignore
 }
 
-const syncMongoToSQLite = async () => {
-    console.log('🔄 Starting Sync: MongoDB -> SQLite...');
+const MONGODB_URI = process.env.VITE_MONGODB_URI || process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+    console.error('❌ Error: MONGODB_URI not found in .env file.');
+    process.exit(1);
+}
+
+// SQLite Configuration
+const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
+const db = new Database(dbPath); // Read-Write Mode
+
+async function syncToSqlite() {
+    console.log('🔄 Starting Reverse Sync: MongoDB -> SQLite...');
 
     try {
-        await dbConnect();
+        // 1. Connect to MongoDB
+        await mongoose.connect(MONGODB_URI as string);
         console.log('✅ Connected to MongoDB');
 
-        // 1. Sync Fact Checks
-        console.log('📦 Fetching Fact Checks...');
-        const facts = await FactCheck.find({});
-        console.log(`found ${facts.length} fact checks.`);
+        // 2. Fetch all facts from MongoDB
+        const facts = await FactCheck.find({}).lean();
+        console.log(`📂 Found ${facts.length} records in MongoDB.`);
 
-        let factCount = 0;
-        for (const fact of facts) {
-            saveFactCache(fact.query, {
-                text: fact.text,
-                claimant: fact.claimant,
-                rating: fact.rating,
-                publisher: fact.publisher,
-                date: fact.date,
-                url: fact.url,
-                source: fact.source
-            });
-            factCount++;
-        }
-        console.log(`✅ Synced ${factCount} fact checks to SQLite.`);
+        // 3. Prepare SQLite Table (Ensure it exists)
+        db.exec(`
+            CREATE TABLE IF NOT EXISTS fact_cache (
+                query TEXT PRIMARY KEY,
+                data TEXT
+            )
+        `);
 
-        // 2. Sync Chat History
-        console.log('💬 Fetching Chat History...');
-        const chats = await Chat.find({});
-        console.log(`found ${chats.length} chat records.`);
+        // 4. Sync Loop
+        const insertStmt = db.prepare(`
+            INSERT OR REPLACE INTO fact_cache (query, data) VALUES (?, ?)
+        `);
 
-        let chatCount = 0;
-        for (const chat of chats) {
-            saveToSQLite(chat._id.toString(), {
-                userId: chat.userId,
-                text: chat.text,
-                label: chat.label,
-                score: chat.score,
-                reason: chat.reason,
-                factCheck: chat.factCheck,
-                base64Image: chat.base64Image, // Sync Image
-                imageHash: chat.imageHash,     // Sync Hash
-                createdAt: chat.createdAt.toISOString(),
-                _id: chat._id.toString()
-            });
-            chatCount++;
-        }
-        console.log(`✅ Synced ${chatCount} chat records to SQLite.`);
+        let syncedCount = 0;
+        let errorCount = 0;
 
-        console.log('\n🎉 Full Sync Complete!');
-        process.exit(0);
+        const runTransaction = db.transaction((factsToSync) => {
+            for (const fact of factsToSync) {
+                try {
+                    const query = fact.query;
+
+                    // Reconstruct the 'data' JSON object expected by the app
+                    const dataObj = {
+                        text: fact.text,
+                        claimant: fact.claimant,
+                        rating: fact.rating,
+                        publisher: fact.publisher,
+                        date: fact.date,
+                        url: fact.url,
+                        source: fact.source || 'mongo-sync'
+                    };
+
+                    insertStmt.run(query, JSON.stringify(dataObj));
+                    syncedCount++;
+                } catch (err: any) {
+                    console.error(`❌ Failed to sync query "${fact.query}":`, err.message);
+                    errorCount++;
+                }
+            }
+        });
+
+        runTransaction(facts);
+
+        console.log(`\n\n🎉 Reverse Sync Complete!`);
+        console.log(`✅ Successfully downloaded: ${syncedCount}`);
 
     } catch (error) {
-        console.error('❌ Sync Failed:', error);
-        process.exit(1);
+        console.error('❌ Fatal Sync Error:', error);
+    } finally {
+        // 5. Cleanup
+        db.close();
+        await mongoose.disconnect();
+        console.log('🔌 Connections closed.');
     }
-};
+}
 
-syncMongoToSQLite();
+// Run the sync
+syncToSqlite();

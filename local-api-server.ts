@@ -23,6 +23,29 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 
+// LOGGING SETUP
+import fs from 'fs';
+import path from 'path';
+
+const logFile = path.join(process.cwd(), 'server.log');
+const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+
+const originalLog = console.log;
+const originalError = console.error;
+
+console.log = function (...args) {
+    const msg = `[INFO] ${new Date().toISOString()} - ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}\n`;
+    logStream.write(msg);
+    originalLog.apply(console, args);
+};
+
+console.error = function (...args) {
+    const msg = `[ERROR] ${new Date().toISOString()} - ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}\n`;
+    logStream.write(msg);
+    originalError.apply(console, args);
+};
+// END LOGGING SETUP
+
 // Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });

@@ -1,11 +1,12 @@
 
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import Logo from '../components/Logo';
 
 const Signup = () => {
     const navigate = useNavigate();
+    const { signup } = useAuth();
     const [formData, setFormData] = useState({ username: '', email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -16,10 +17,16 @@ const Signup = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:3001/api/auth/signup', formData);
-            navigate('/verify-otp', { state: { email: formData.email } });
+            // Use Centralized Auth Context
+            const result = await signup(formData.username, formData.email, formData.password);
+
+            if (result.success) {
+                navigate('/verify-otp', { state: { email: formData.email } });
+            } else {
+                setError(result.message || 'Signup failed');
+            }
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Signup failed');
+            setError(err.message || 'Signup failed');
         } finally {
             setLoading(false);
         }
