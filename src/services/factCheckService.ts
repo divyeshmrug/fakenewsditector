@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const GOOGLE_API_KEY = import.meta.env.VITE_CHECK_API_KEY;
-const BASE_URL = 'https://factchecktools.googleapis.com/v1alpha1/claims:search';
+// const GOOGLE_API_KEY = import.meta.env.VITE_CHECK_API_KEY;
+// const BASE_URL = 'https://factchecktools.googleapis.com/v1alpha1/claims:search';
 
 export interface FactCheckResult {
     found: boolean;
@@ -13,7 +13,7 @@ export interface FactCheckResult {
     url?: string;
 }
 
-export const checkFacts = async (query: string, apiKey?: string): Promise<FactCheckResult> => {
+export const checkFacts = async (query: string): Promise<FactCheckResult> => {
     try {
         console.log(`Checking Facts for: "${query}"`);
 

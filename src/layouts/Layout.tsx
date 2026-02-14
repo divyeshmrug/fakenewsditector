@@ -1,5 +1,5 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+// import { useAuth } from '../context/AuthContext';
 import { LogOut } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useTranslation } from 'react-i18next';

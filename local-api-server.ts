@@ -37,6 +37,14 @@ const wrap = (fn: any) => (req: any, res: any, next: any) => {
 app.all('/api/chats', wrap(chatHandler));
 app.post('/api/fact-check', wrap(factCheckHandler));
 
+// Auth Routes
+import * as auth from './api/auth';
+app.post('/api/auth/signup', wrap(auth.signup));
+app.post('/api/auth/verify', wrap(auth.verify));
+app.post('/api/auth/login', wrap(auth.login));
+app.post('/api/auth/forgot-password', wrap(auth.forgotPassword));
+app.post('/api/auth/reset-password', wrap(auth.resetPassword));
+
 // Cache Sync Function
 import dbConnect from './src/lib/mongodb';
 import FactCheck from './src/models/FactCheck';

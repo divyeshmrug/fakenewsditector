@@ -7,7 +7,7 @@ import path from 'path';
 const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
 const db = new Database(dbPath);
 
-// Initialize table (v2 with userId)
+// Initialize table (v2 with userId, v3 with images)
 db.exec(`
   CREATE TABLE IF NOT EXISTS user_chats (
     id TEXT PRIMARY KEY,
@@ -17,36 +17,51 @@ db.exec(`
     score INTEGER NOT NULL,
     reason TEXT NOT NULL,
     factCheck TEXT,
+    base64Image TEXT,
+    imageHash TEXT,
     createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 
-// Initialize Fact Cache Table (For FAQs/High Frequency Queries)
-db.exec(`
-  CREATE TABLE IF NOT EXISTS fact_cache (
-    query TEXT PRIMARY KEY,
-    data TEXT NOT NULL,
-    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+// Add columns if they don't exist (Migration for v3)
+try {
+  db.exec('ALTER TABLE user_chats ADD COLUMN base64Image TEXT');
+  db.exec('ALTER TABLE user_chats ADD COLUMN imageHash TEXT');
+} catch (e) {
+  // Columns likely exist, ignore
+}
+
+// ... Fact Cache Table ...
 
 export interface ChatData {
-  userId?: string; // Added userId
+  userId?: string;
   text: string;
   label: string;
   score: number;
   reason: string;
   factCheck?: any;
-  createdAt?: string; // Added for retrieval
-  _id?: string; // Mapped from id
+  base64Image?: string; // Added
+  imageHash?: string;   // Added
+  createdAt?: string;
+  _id?: string;
 }
 
 export const saveToSQLite = (id: string, data: ChatData) => {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO user_chats (id, userId, text, label, score, reason, factCheck)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO user_chats (id, userId, text, label, score, reason, factCheck, base64Image, imageHash)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(id, data.userId || 'guest', data.text, data.label, data.score, data.reason, JSON.stringify(data.factCheck));
+  stmt.run(
+    id,
+    data.userId || 'guest',
+    data.text,
+    data.label,
+    data.score,
+    data.reason,
+    JSON.stringify(data.factCheck),
+    data.base64Image || null,
+    data.imageHash || null
+  );
 };
 
 export const findInSQLite = (text: string) => {

@@ -86,7 +86,7 @@ const Dashboard = () => {
 
             // ... verification logic ...
             // 1. Check Official Database first
-            const databaseResult = await checkFacts(text, keys.check);
+            const databaseResult = await checkFacts(text);
             setFactCheck(databaseResult);
 
             // 2. Search Multi-Source Context in Parallel

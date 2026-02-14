@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface User {
     id: string;
@@ -9,39 +9,62 @@ interface User {
 interface AuthContextType {
     isAuthenticated: boolean;
     user: User | null;
-    userRole: 'user' | 'admin' | null;
-    login: () => void; // Updated signature
+    token: string | null;
+    login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
     logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    // Mock user for direct access
-    const mockUser: User = {
-        id: 'mock-user-id',
-        username: 'Admin User',
-        email: 'admin@example.com'
-    };
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [user, setUser] = useState<User | null>(null);
+    const [token, setToken] = useState<string | null>(null);
 
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-    const [user, setUser] = useState<User | null>(mockUser);
-    const [userRole, setUserRole] = useState<'user' | 'admin' | null>('admin');
+    useEffect(() => {
+        const storedToken = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+        if (storedToken && storedUser) {
+            setToken(storedToken);
+            setUser(JSON.parse(storedUser));
+            setIsAuthenticated(true);
+            // Optional: Validate token with backend here
+        }
+    }, []);
 
-    const login = () => {
-        setIsAuthenticated(true);
-        setUser(mockUser);
-        setUserRole('admin');
+    const login = async (email: string, password: string) => {
+        try {
+            const response = await fetch('http://localhost:3001/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Login failed');
+            }
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            setToken(data.token);
+            setUser(data.user);
+            setIsAuthenticated(true);
+            return { success: true };
+        } catch (error: any) {
+            console.error('Login Error:', error);
+            return { success: false, message: error.message };
+        }
     };
 
     const logout = () => {
-        setIsAuthenticated(false);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
         setUser(null);
-        setUserRole(null);
+        setIsAuthenticated(false);
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, user, userRole, login, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, user, token, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

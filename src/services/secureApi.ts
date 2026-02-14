@@ -13,8 +13,8 @@ export const detectFakeNewsWithAI = async (text: string, context?: string, apiKe
         console.log("Analyzing with AI Core:", text || "Direct Image Analysis");
 
         const token = apiKey || SECURE_API_KEY;
-        // Use Llama 4 Scout (Current Groq Vision standard in Feb 2026)
-        const selectedModel = base64Image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : (modelName || MODEL_NAME);
+        // Use Llama 3.2 Vision (Standard Groq Vision Model)
+        const selectedModel = base64Image ? 'llama-3.2-90b-vision-preview' : (modelName || MODEL_NAME);
 
         if (!token) {
             return {
