@@ -1,0 +1,91 @@
+
+===================================================
+ AXIANT INTELLIGENCE - USER DATABASE (BINARY TREE)
+===================================================
+Generated: 14/2/2026, 11:25:11 pm
+Total Users: 15
+Note: Passwords are hashed for security (Argon2).
+
+VISUAL TREE STRUCTURE (Sorted by Username)
+===================================================
+│                       ┌── [xenon] (xenon2266@gmail.com) - Hash: $argon2id$...
+│                       │   │       ┌── [User_1771086641885] (test_user_1771086641884@example.com) - Hash: $argon2id$...
+│                       │   │   ┌── [User_1771086010993] (test_user_1771086010993@example.com) - Hash: $argon2id$...
+│                       │   └── [User_1771085112361] (test_user_1771085112361@example.com) - Hash: $argon2id$...
+│                       │       │       ┌── [testuser3] (test3@example.com) - Hash: $argon2id$...
+│                       │       │   ┌── [testuser2] (test2@example.com) - Hash: $argon2id$...
+│                       │       └── [suro] (figmasir@gmail.com) - Hash: $argon2id$...
+│                   ┌── [suro] (surogandu6@gmail.com) - Hash: $argon2id$...
+│               ┌── [suro] (gandusuro6@gmail.com) - Hash: $argon2id$...
+│           ┌── [param] (paramdetroja9911@gmail.com) - Hash: $argon2id$...
+│       ┌── [param] (p@fnd.com) - Hash: $argon2id$...
+│   ┌── [fnd] (fnd@veritas.ai) - Hash: $argon2id$...
+└── [divyesh] (divyesh@veritas.ai) - Hash: $argon2id$...
+    └── [Auth Tester] (test_1770798453691@example.com) - Hash: $argon2id$...
+        └── [Admin] (admin@axiant.com) - Hash: $argon2id$...
+
+
+FULL DETAILED LIST (Traversed)
+===================================================
+User: divyesh
+Email: divyesh@veritas.ai
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$/STVLNPe8uoyXFiSc9TnmQ$tp2ZzJ8kCHjPMFdA995HXMd5uu3cdM5dvV8FNuIR1y8
+-----------------------------------
+User: Auth Tester
+Email: test_1770798453691@example.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$PnUbzibQxL8x8DH3CG3CWQ$PwyLmB+8G+3fyS32/dOcZ7IYyBwwU0RV03GGguEELTE
+-----------------------------------
+User: Admin
+Email: admin@axiant.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$ZybZNJmsXRbDpuSh4i/iPg$2AEOs+4VZUKXhKsRpKb07CgJiBV1M+SiYaNw0h6LZhA
+-----------------------------------
+User: fnd
+Email: fnd@veritas.ai
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$/STVLNPe8uoyXFiSc9TnmQ$tp2ZzJ8kCHjPMFdA995HXMd5uu3cdM5dvV8FNuIR1y8
+-----------------------------------
+User: param
+Email: p@fnd.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$GORaEhq+rWGrapHj3DmUfg$9qJlHfiUc/M8+G1HCuGl0qXdLQ8mcT24DXhj+wHrCiQ
+-----------------------------------
+User: param
+Email: paramdetroja9911@gmail.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$SyP7jF62eyQTGN5lKsyvCA$p2am3F+y7+yT7b6TFNwtkgdx8jv8UJeg7PuNcVD74B4
+-----------------------------------
+User: suro
+Email: gandusuro6@gmail.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$AGKWc4CziCnf0CaPwZ3Mhw$ePerYNZeHoY9hzou32KJrUSgW8D6wy0+TzlNzNlZ0Bk
+-----------------------------------
+User: suro
+Email: surogandu6@gmail.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$riTtI+8oApgZlnHxncqL5w$vC3yp1wUiIAJf5RpRP00lzCmAyZL4rEUNUPm1m6Ya48
+-----------------------------------
+User: xenon
+Email: xenon2266@gmail.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$TAWgGw/XMHV1oniELLIc9Q$NhxC7kpcAGTQcKbZYIjAKw+fuCWLdB12+74+Rcfaf1s
+-----------------------------------
+User: User_1771085112361
+Email: test_user_1771085112361@example.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$uqil2OAnkHo4CZ8/8QKuJg$UeD6k39/CFGC9+Lmfs+g3eBbYkrPGz84dlR4bAw0eMQ
+-----------------------------------
+User: suro
+Email: figmasir@gmail.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$QsACcveYhv1ChhJYD4J7+Q$jtkNiYdQ/vE2nnOSKjXXEPsqn1txB3LpIpyPbtvEc0U
+-----------------------------------
+User: testuser2
+Email: test2@example.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$87+uxBRVgnc+QuU9vfhwjg$w7D8vBa2QbEt4VIdPRj07jSH2thwANlpepOAcxKVh1c
+-----------------------------------
+User: testuser3
+Email: test3@example.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$W4YFwqbF5EfnCxQ7bLFVWQ$/FIRnurV07tYAahA++qa50JuOf9Y7scEYcUWbOwW03o
+-----------------------------------
+User: User_1771086010993
+Email: test_user_1771086010993@example.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$t/0VFpiRBggNshPfAkXGwg$AV6Mr1cTlUn9RAHG4N+QgQ4oeytIgFoY1rM777H0fLU
+-----------------------------------
+User: User_1771086641885
+Email: test_user_1771086641884@example.com
+PassHash: $argon2id$v=19$m=65536,t=3,p=4$Xi6BAwiGAqkZdN3yuRyOgg$CbgiTU/Gkz4BEfSv2ru7xHsarG6qHqWV21zsY/ObZKY
+-----------------------------------
+
+    

@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import User from '../src/models/User';
+import { saveUserToSQLite } from '../src/lib/sqlite';
 import { sendOTP, sendMail } from '../src/lib/mail';
 import dbConnect from '../src/lib/mongodb';
 
@@ -34,6 +35,19 @@ export const signup = async (req: Request, res: Response) => {
             isVerified: false
         });
 
+        // Dual-Write to SQLite
+        try {
+            saveUserToSQLite({
+                id: newUser._id.toString(),
+                username: newUser.username,
+                email: newUser.email,
+                password: newUser.password,
+                isVerified: false
+            });
+        } catch (sqliteError) {
+            console.error('SQLite Backup Failed:', sqliteError);
+        }
+
         // Send OTP Email
         await sendOTP(email, otp);
 
@@ -62,6 +76,19 @@ export const verify = async (req: Request, res: Response) => {
         user.otp = undefined;
         user.otpExpires = undefined;
         await user.save();
+
+        // Dual-Write to SQLite
+        try {
+            saveUserToSQLite({
+                id: user._id.toString(),
+                username: user.username,
+                email: user.email,
+                password: user.password,
+                isVerified: true
+            });
+        } catch (sqliteError) {
+            console.error('SQLite Backup Failed:', sqliteError);
+        }
 
         // Send Welcome Email
         await sendMail(
@@ -162,6 +189,19 @@ export const resetPassword = async (req: Request, res: Response) => {
         user.resetToken = undefined;
         user.resetTokenExpires = undefined;
         await user.save();
+
+        // Dual-Write to SQLite
+        try {
+            saveUserToSQLite({
+                id: user._id.toString(),
+                username: user.username,
+                email: user.email,
+                password: user.password,
+                isVerified: user.isVerified // Should be true if they are resetting password
+            });
+        } catch (sqliteError) {
+            console.error('SQLite Backup Failed:', sqliteError);
+        }
 
         res.json({ success: true, message: 'Password reset successfully' });
     } catch (error) {

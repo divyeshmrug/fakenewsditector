@@ -4,6 +4,7 @@ import path from 'path';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import FactCheck from '../src/models/FactCheck';
+import User from '../src/models/User';
 
 // Load environment variables
 dotenv.config();
@@ -36,19 +37,56 @@ async function syncToSqlite() {
         await mongoose.connect(MONGODB_URI as string);
         console.log('✅ Connected to MongoDB');
 
-        // 2. Fetch all facts from MongoDB
-        const facts = await FactCheck.find({}).lean();
-        console.log(`📂 Found ${facts.length} records in MongoDB.`);
 
-        // 3. Prepare SQLite Table (Ensure it exists)
+
+        // 3. Prepare SQLite Tables
         db.exec(`
             CREATE TABLE IF NOT EXISTS fact_cache (
                 query TEXT PRIMARY KEY,
                 data TEXT
-            )
+            );
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                isVerified INTEGER DEFAULT 0,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
         `);
 
-        // 4. Sync Loop
+        // --- SYNC USERS ---
+        console.log('👥 Syncing Users...');
+        const users = await User.find({}).lean();
+        console.log(`📂 Found ${users.length} users in MongoDB.`);
+
+        const insertUser = db.prepare(`
+            INSERT OR REPLACE INTO users (id, username, email, password, isVerified)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+
+        let userCount = 0;
+        const userTx = db.transaction((userList) => {
+            for (const u of userList) {
+                insertUser.run(
+                    u._id.toString(),
+                    u.username,
+                    u.email,
+                    u.password,
+                    u.isVerified ? 1 : 0
+                );
+                userCount++;
+            }
+        });
+        userTx(users);
+        console.log(`✅ Synced ${userCount} users.`);
+
+        // --- SYNC FACTS ---
+        console.log('🧠 Syncing Fact Checks...');
+        const facts = await FactCheck.find({}).lean();
+        console.log(`📂 Found ${facts.length} facts in MongoDB.`);
+
+        // 4. Sync Loop (Facts)
         const insertStmt = db.prepare(`
             INSERT OR REPLACE INTO fact_cache (query, data) VALUES (?, ?)
         `);
@@ -84,7 +122,8 @@ async function syncToSqlite() {
         runTransaction(facts);
 
         console.log(`\n\n🎉 Reverse Sync Complete!`);
-        console.log(`✅ Successfully downloaded: ${syncedCount}`);
+        console.log(`✅ Users Synced: ${userCount}`);
+        console.log(`✅ Facts Synced: ${syncedCount}`);
 
     } catch (error) {
         console.error('❌ Fatal Sync Error:', error);

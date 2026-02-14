@@ -1,11 +1,13 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Logo from '../components/Logo';
 import { useTranslation } from 'react-i18next';
+import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
 
 const Login = () => {
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const { t } = useTranslation();
@@ -17,13 +19,21 @@ const Login = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [isAuthenticated, navigate]);
+
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevent form submission refresh
         setError('');
         setLoading(true);
 
         try {
             const result = await login(email, password);
+            // login function usually handles redirect in context or returns true/false, 
+            // but here we check result based on my previous analysis of Login.tsx
             if (result.success) {
                 navigate('/dashboard');
             } else {
@@ -37,59 +47,122 @@ const Login = () => {
     };
 
     return (
-        <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900">
-            <div className="absolute inset-0 bg-cover bg-center z-0 opacity-20" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')" }}></div>
-            <div className="z-10 mb-8 flex flex-col items-center">
-                <Logo size={80} className="mb-4 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]" />
-                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">{t('login_title')}</h1>
+        <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-slate-950 font-sans">
+            {/* Dynamic Background Elements */}
+            <div className="absolute inset-0 z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[120px] animate-pulse-slow"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] animate-float"></div>
+                <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-purple-500/5 rounded-full blur-[100px] animate-pulse-slow"></div>
             </div>
-            <div className="z-10 bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-gray-700/50 max-w-md w-full mx-4">
-                <h2 className="text-2xl font-bold text-white mb-2 text-center">{t('login_title')}</h2>
-                <p className="text-gray-400 text-center mb-8">{t('login_subtitle')}</p>
 
-                {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-center text-sm">{error}</div>}
-                {message && <div className="bg-green-500/20 text-green-300 p-3 rounded-lg mb-4 text-center text-sm">{message}</div>}
+            {/* Grid Pattern Overlay */}
+            <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-                <form onSubmit={handleLogin} className="space-y-4">
-                    <div>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                            placeholder="Email"
-                        />
+            <div className="relative z-10 w-full max-w-lg p-6 animate-reveal">
+                {/* Branding Section */}
+                <div className="mb-8 flex flex-col items-center">
+                    <div className="relative group mb-6">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative bg-slate-900 rounded-full p-6 shadow-2xl">
+                            <Logo size={60} />
+                        </div>
                     </div>
-                    <div>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                            placeholder="Password"
-                        />
+                    <div className="text-center">
+                        <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-slate-400 tracking-tighter uppercase italic leading-tight mb-2">
+                            {t('login_title') || 'AXIANT INTELLIGENCE'}
+                        </h1>
+                        <div className="h-1 w-24 bg-gradient-to-r from-cyan-500 to-transparent mx-auto rounded-full"></div>
+                    </div>
+                </div>
+
+                {/* Login Card */}
+                <div className="glass-panel rounded-[30px] shadow-2xl p-8 relative overflow-hidden bg-slate-900/80 backdrop-blur-xl border border-white/10">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
+
+                    <div className="mb-6 text-center">
+                        <h2 className="text-xl font-bold text-white mb-1">Welcome Back</h2>
+                        <p className="text-slate-400 text-xs font-medium tracking-wide">
+                            Sign in to continue to your dashboard
+                        </p>
                     </div>
 
-                    <div className="text-right">
-                        <Link to="/forgot-password" className="text-xs text-cyan-400 hover:text-cyan-300">Forgot Password?</Link>
+                    {/* Messages */}
+                    {error && (
+                        <div className="bg-red-500/20 text-red-300 p-3 rounded-xl mb-4 text-center text-xs flex items-center justify-center gap-2 border border-red-500/20">
+                            <AlertCircle size={14} /> {error}
+                        </div>
+                    )}
+                    {message && (
+                        <div className="bg-green-500/20 text-green-300 p-3 rounded-xl mb-4 text-center text-xs border border-green-500/20">
+                            {message}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Email Address</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="name@company.com"
+                                required
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-sm placeholder:text-slate-600"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <div className="flex justify-between items-center ml-1">
+                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
+                                <Link to="/forgot-password" className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold transition-colors">
+                                    Forgot Password?
+                                </Link>
+                            </div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500 transition-all text-sm placeholder:text-slate-600"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="group relative w-full overflow-hidden rounded-xl bg-cyan-600 p-[1px] transition-all hover:scale-[1.01] active:scale-95 shadow-lg shadow-cyan-900/30 mt-4 disabled:opacity-50"
+                        >
+                            <div className="relative flex items-center justify-center space-x-2 rounded-[10px] bg-slate-950 px-6 py-3 transition-all group-hover:bg-transparent">
+                                <span className="text-sm font-black uppercase tracking-widest text-cyan-400 group-hover:text-white transition-colors">
+                                    {loading ? 'Authenticating...' : 'Sign In'}
+                                </span>
+                                {!loading && <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:text-white group-hover:translate-x-1 transition-all" />}
+                            </div>
+                        </button>
+                    </form>
+
+                    <div className="relative flex py-2 items-center">
+                        <div className="flex-grow border-t border-slate-800"></div>
+                        <span className="flex-shrink-0 mx-4 text-slate-600 text-[10px] uppercase tracking-widest font-bold">Or</span>
+                        <div className="flex-grow border-t border-slate-800"></div>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 px-4 rounded-xl transition duration-300 shadow-lg shadow-cyan-900/30 uppercase tracking-widest text-sm disabled:opacity-50"
+                    <Link
+                        to="/signup"
+                        className="w-full bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-6 py-3 font-bold text-sm transition-colors border border-slate-700 hover:border-slate-600 flex items-center justify-center space-x-2 block text-center"
                     >
-                        {loading ? 'Authenticating...' : (t('login_title') === 'Login' ? 'Login' : 'Login')}
-                    </button>
-                </form>
+                        <span>Create Account</span>
+                    </Link>
 
-                <div className="mt-6 text-center">
-                    <p className="text-gray-400 text-sm">
-                        New here?{' '}
-                        <Link to="/signup" className="text-cyan-400 hover:text-cyan-300 font-bold">Create Account</Link>
-                    </p>
+                </div>
+
+                {/* Footer Badges */}
+                <div className="mt-8 flex justify-center space-x-6 opacity-30">
+                    <div className="flex items-center space-x-2 grayscale hover:grayscale-0 transition-all cursor-default">
+                        <Shield size={12} className="text-cyan-400" />
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">Secure</span>
+                    </div>
                 </div>
             </div>
         </div>

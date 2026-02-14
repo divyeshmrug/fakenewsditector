@@ -31,6 +31,18 @@ try {
   // Columns likely exist, ignore
 }
 
+// Initialize Users Table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    isVerified INTEGER DEFAULT 0,
+    createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // ... Fact Cache Table ...
 
 export interface ChatData {
@@ -98,6 +110,30 @@ export const getFactCache = (query: string) => {
 export const saveFactCache = (query: string, data: any) => {
   const stmt = db.prepare('INSERT OR REPLACE INTO fact_cache (query, data) VALUES (?, ?)');
   stmt.run(query.toLowerCase().trim(), JSON.stringify(data));
+};
+
+// --- User Functions ---
+
+export interface UserData {
+  id: string;
+  username: string;
+  email: string;
+  password: string;
+  isVerified: boolean;
+}
+
+export const saveUserToSQLite = (user: UserData) => {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO users (id, username, email, password, isVerified)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    user.id,
+    user.username,
+    user.email,
+    user.password,
+    user.isVerified ? 1 : 0
+  );
 };
 
 export default db;
