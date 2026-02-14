@@ -194,12 +194,12 @@ const Dashboard = () => {
                         <Info className="mr-2" size={16} />
                         Input Content
                     </label>
-                    <div className="relative flex-grow mb-8 group">
+                    <div className="relative flex-grow mb-8 group flex flex-col space-y-4">
                         {base64Image && (
-                            <div className="absolute inset-0 z-20 bg-gray-900/90 flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-cyan-500/50 animate-reveal">
+                            <div className="bg-gray-900/90 flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-cyan-500/50 animate-reveal">
                                 <img
                                     src={`data:image/jpeg;base64,${base64Image}`}
-                                    className="max-h-[70%] rounded-lg mb-4 shadow-2xl"
+                                    className="max-h-64 rounded-lg mb-4 shadow-2xl"
                                     alt="Analysis target"
                                 />
                                 <div className="flex space-x-4">
@@ -215,27 +215,29 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         )}
-                        <textarea
-                            className="w-full h-full bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
-                            placeholder="Paste text or headline to verify..."
-                            value={text}
-                            onChange={(e) => setText(e.target.value)}
-                        />
-                        <div className="absolute top-4 right-4 flex space-x-2">
-                            <input
-                                type="file"
-                                id="image-upload"
-                                className="hidden"
-                                accept="image/*"
-                                onChange={handleImageUpload}
+                        <div className="relative flex-grow">
+                            <textarea
+                                className="w-full h-full min-h-[200px] bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
+                                placeholder={base64Image ? "Add a claim to verify with this image (optional)..." : "Paste text or headline to verify..."}
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
                             />
-                            <label
-                                htmlFor="image-upload"
-                                className="p-3 bg-gray-800/80 hover:bg-cyan-600/20 text-cyan-400 border border-gray-700 rounded-xl cursor-pointer transition-all flex items-center group/btn"
-                                title="Extract text from image"
-                            >
-                                {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />}
-                            </label>
+                            <div className="absolute top-4 right-4 flex space-x-2">
+                                <input
+                                    type="file"
+                                    id="image-upload"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                />
+                                <label
+                                    htmlFor="image-upload"
+                                    className="p-3 bg-gray-800/80 hover:bg-cyan-600/20 text-cyan-400 border border-gray-700 rounded-xl cursor-pointer transition-all flex items-center group/btn"
+                                    title="Extract text from image"
+                                >
+                                    {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />}
+                                </label>
+                            </div>
                         </div>
                     </div>
                     <div className="mt-8 flex justify-end">
