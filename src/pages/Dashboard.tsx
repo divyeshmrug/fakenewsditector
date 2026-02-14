@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useAuth } from '../context/AuthContext';
+// import { useAuth as useClerk } from '@clerk/clerk-react'; // Removed Clerk
 import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../services/secureApi';
 // ... other imports ...
 import { checkFacts, type FactCheckResult } from '../services/factCheckService';
@@ -11,10 +10,10 @@ import { useSettings } from '../context/SettingsContext';
 import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History } from 'lucide-react';
 
 const Dashboard = () => {
-    const { t } = useTranslation();
-    const { user } = useAuth();
+    // const { getToken } = useClerk(); // Removed Clerk hook
+    // Mock token function since we are bypassing auth
+    const getToken = async () => null;
     const { keys } = useSettings();
-
     // ... state ...
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
@@ -30,8 +29,8 @@ const Dashboard = () => {
     }, []);
 
     const loadHistory = async () => {
-        // No token needed for local auth
-        const data = await fetchChatHistory(undefined);
+        const token = await getToken();
+        const data = await fetchChatHistory(token || undefined);
         setHistory(data);
     };
 
@@ -47,10 +46,10 @@ const Dashboard = () => {
         setAltData(null);
 
         try {
-            // No token needed
+            const token = await getToken();
 
             // 0. CHECK CACHE FIRST to save API limits
-            const cachedResult = await checkCache(text, undefined);
+            const cachedResult = await checkCache(text, token || undefined);
             if (cachedResult) {
                 console.log("Using cached result for:", text);
                 setResult({
@@ -115,7 +114,7 @@ const Dashboard = () => {
                     score: aiData.score,
                     reason: aiData.reason,
                     factCheck: databaseResult.found ? databaseResult : undefined
-                }, undefined);
+                }, token || undefined);
                 loadHistory(); // Refresh history
             } catch (saveErr) {
                 console.error('Failed to save to history:', saveErr);
@@ -154,7 +153,7 @@ const Dashboard = () => {
     return (
         <div className="w-full h-full min-h-[calc(100vh-80px)] p-6 bg-gray-900 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-black mb-8 text-center bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent tracking-tighter">
-                {t('app_title')}
+                AUTHENTICITY ENGINE
             </h1>
 
             <div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
@@ -162,11 +161,11 @@ const Dashboard = () => {
                 <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-gray-700/50 flex flex-col">
                     <label className="text-gray-400 text-sm font-bold mb-4 flex items-center uppercase tracking-widest">
                         <Info className="mr-2" size={16} />
-                        {t('reasoning')}
+                        Input Content
                     </label>
                     <textarea
                         className="flex-grow w-full bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
-                        placeholder={t('placeholder')}
+                        placeholder="Paste text or headline to verify..."
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                     />
@@ -182,12 +181,12 @@ const Dashboard = () => {
                             {loading ? (
                                 <>
                                     <Loader2 className="animate-spin" size={24} />
-                                    <span className="tracking-widest uppercase">{t('analyzing')}</span>
+                                    <span className="tracking-widest">ANALYZING</span>
                                 </>
                             ) : (
                                 <>
                                     <Send size={24} />
-                                    <span className="tracking-widest uppercase">{t('verify_now')}</span>
+                                    <span className="tracking-widest">VERIFY NOW</span>
                                 </>
                             )}
                         </button>
@@ -206,7 +205,7 @@ const Dashboard = () => {
                             </div>
 
                             <h2 className={`text-7xl font-black mb-4 ${getResultColor(displayLabel)} tracking-tighter uppercase`}>
-                                {t(`result_${displayLabel.toLowerCase()}`)}
+                                {displayLabel}
                             </h2>
 
                             <div className="text-white text-xl font-bold mb-8 bg-gray-900/80 px-8 py-3 rounded-full border border-gray-700 shadow-lg">
@@ -215,7 +214,7 @@ const Dashboard = () => {
 
                             <div className="bg-gray-950/80 border border-gray-700/50 rounded-2xl p-8 max-w-lg w-full mb-8 text-left backdrop-blur-sm relative shadow-2xl">
                                 <div className={`absolute top-0 left-0 w-1.5 h-full rounded-l-2xl ${displayLabel === 'TRUE' ? 'bg-green-500' : (displayLabel === 'UNVERIFIED' ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
-                                <h3 className="text-gray-500 text-xs font-black uppercase tracking-[0.2em] mb-4">{t('reasoning')}</h3>
+                                <h3 className="text-gray-500 text-xs font-black uppercase tracking-[0.2em] mb-4">Core Reasoning</h3>
                                 <p className="text-gray-100 text-lg leading-relaxed font-semibold">
                                     {result?.reason}
                                     {(newsData?.found || altData?.found || factCheck?.found) && (
@@ -273,7 +272,7 @@ const Dashboard = () => {
             <div className="w-full max-w-[1600px] mt-12 bg-gray-800/30 backdrop-blur-sm rounded-3xl p-8 border border-gray-700/30">
                 <div className="flex items-center mb-6 text-cyan-400">
                     <History className="mr-3" size={24} />
-                    <h2 className="text-2xl font-black uppercase tracking-widest">{t('recent_checks')}</h2>
+                    <h2 className="text-2xl font-black uppercase tracking-widest">Analysis History</h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

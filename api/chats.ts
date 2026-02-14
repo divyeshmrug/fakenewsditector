@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClerkClient } from '@clerk/backend';
 import dbConnect from '../src/lib/mongodb';
 import Chat from '../src/models/Chat';
-import { saveToSQLite, findInSQLite } from '../src/lib/sqlite';
+import { saveToSQLite, findInSQLite, getHistoryFromSQLite } from '../src/lib/sqlite';
 
 const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
@@ -23,12 +23,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!userId) {
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        // Fallback for demo/guest mode
+        userId = 'guest-user-123';
+        // return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
     const { method, query } = req;
 
-    await dbConnect();
+    const conn = await dbConnect();
+    const isDbConnected = conn && conn.connection.readyState === 1;
 
     switch (method) {
         case 'GET':
@@ -44,7 +47,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
 
                     // 2. Check MongoDB
-                    const cachedInMongo = await Chat.findOne({ text: textToSearch, userId });
+                    let cachedInMongo = null;
+                    if (isDbConnected) {
+                        cachedInMongo = await Chat.findOne({ text: textToSearch, userId });
+                    }
+
                     if (cachedInMongo) {
                         // Fill SQLite cache for next time
                         saveToSQLite(cachedInMongo._id.toString(), cachedInMongo);
@@ -55,6 +62,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
 
                 // Default: Get History for current user
+                if (!isDbConnected) {
+                    // Fallback to SQLite
+                    const chats = getHistoryFromSQLite(userId || 'guest');
+                    return res.status(200).json({ success: true, data: chats, source: 'sqlite-local' });
+                }
                 const chats = await Chat.find({ userId }).sort({ createdAt: -1 }).limit(20);
                 res.status(200).json({ success: true, data: chats });
             } catch (error: any) {
@@ -66,7 +78,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             try {
                 // Save to MongoDB with userId
                 const chatData = { ...req.body, userId };
-                const chat = await Chat.create(chatData);
+
+                let chat;
+                if (isDbConnected) {
+                    chat = await Chat.create(chatData);
+                } else {
+                    // Mock chat object for SQLite only mode
+                    chat = { ...chatData, _id: new Date().getTime() }; // Fake ID
+                }
 
                 // Save to SQLite
                 try {

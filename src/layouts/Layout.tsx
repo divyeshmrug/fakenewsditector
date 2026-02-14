@@ -5,7 +5,11 @@ import Logo from '../components/Logo';
 import { useTranslation } from 'react-i18next';
 
 const Layout = () => {
-    const { isAuthenticated, userRole, logout } = useAuth();
+    // const { isAuthenticated, userRole, logout } = useAuth();
+    // For Dev/Bypass Mode:
+    const isAuthenticated = true;
+    const userRole = 'admin';
+    const logout = () => { console.log('Mock Logout'); };
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
 

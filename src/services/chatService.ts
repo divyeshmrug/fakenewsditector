@@ -45,7 +45,12 @@ export const checkCache = async (text: string, token?: string): Promise<ChatReco
         const response = await axios.get(`/api/chats?q=${encodeURIComponent(text)}`, {
             headers: getHeaders(token)
         });
-        return response.data.data;
+        const result = response.data.data;
+        // Optimization: Ignore "Error" results from cache so we retry
+        if (result && (result.score === 0 || (result.reason && result.reason.includes('API Key')))) {
+            return null;
+        }
+        return result;
     } catch (error) {
         console.error('Failed to check cache:', error);
         return null;

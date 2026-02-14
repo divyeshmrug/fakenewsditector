@@ -47,12 +47,16 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const encryptedData = localStorage.getItem(STORAGE_KEY);
         if (encryptedData && verifySignature(encryptedData)) {
-            try {
-                const rawJson = atob(encryptedData).replace(SECRET_SALT, '');
-                setKeys(JSON.parse(rawJson));
-            } catch (e) {
-                console.error("Security vault corrupted, reverting to defaults.");
-                localStorage.removeItem(STORAGE_KEY);
+            if (encryptedData.includes(SECRET_SALT)) {
+                try {
+                    const rawJson = atob(encryptedData).replace(SECRET_SALT, '');
+                    if (rawJson) {
+                        setKeys(JSON.parse(rawJson));
+                    }
+                } catch (e) {
+                    console.error("Security vault corrupted, reverting to defaults.", e);
+                    localStorage.removeItem(STORAGE_KEY);
+                }
             }
         }
     }, []);

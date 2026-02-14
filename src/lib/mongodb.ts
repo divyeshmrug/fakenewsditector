@@ -5,7 +5,7 @@ const MONGODB_URI = (typeof process !== 'undefined' ? process.env.MONGODB_URI : 
     (typeof import.meta !== 'undefined' && 'env' in import.meta ? (import.meta as any).env.VITE_MONGODB_URI : undefined);
 
 if (!MONGODB_URI) {
-    throw new Error('Please define the MONGODB_URI environment variable inside .env');
+    console.warn('⚠️ MONGODB_URI environment variable is not defined. Features relying on MongoDB will be disabled.');
 }
 
 /**
@@ -24,7 +24,13 @@ async function dbConnect() {
         return cached.conn;
     }
 
-    cached.promise = mongoose.connect(MONGODB_URI!).then((mongoose) => {
+    if (!MONGODB_URI) {
+        return null;
+    }
+
+    const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
+
+    cached.promise = mongoose.connect(MONGODB_URI!, clientOptions as any).then((mongoose) => {
         return mongoose;
     });
 

@@ -15,39 +15,28 @@ export interface FactCheckResult {
 
 export const checkFacts = async (query: string, apiKey?: string): Promise<FactCheckResult> => {
     try {
-        console.log(`Validating Database for: "${query}"`);
-        const token = apiKey || GOOGLE_API_KEY;
+        console.log(`Checking Facts for: "${query}"`);
 
-        const response = await axios.get(BASE_URL, {
-            params: {
-                key: token,
-                query: query,
-                languageCode: 'en-US'
-            }
-        });
+        // Call our Backend API (which handles SQLite Cache, Google API, and AI Fallback)
+        // We use relative path '/api/fact-check' which Vite proxies to localhost:3001
+        const response = await axios.post('/api/fact-check', { query });
 
-        const claims = response.data.claims;
-
-        if (claims && claims.length > 0) {
-            // Find the most relevant claim (usually the first one)
-            const bestMatch = claims[0];
-            const review = bestMatch.claimReview[0];
-
+        if (response.data.found) {
             return {
                 found: true,
-                text: bestMatch.text,
-                claimant: bestMatch.claimant,
-                rating: review.textualRating,
-                publisher: review.publisher.name,
-                date: review.reviewDate,
-                url: review.url
+                text: response.data.text,
+                claimant: response.data.claimant,
+                rating: response.data.rating,
+                publisher: response.data.publisher,
+                date: response.data.date,
+                url: response.data.url
             };
         }
 
         return { found: false };
 
     } catch (error: any) {
-        console.warn('Validation API failed:', error.message);
+        console.warn('Fact Check API failed:', error.message);
         return { found: false };
     }
 };
