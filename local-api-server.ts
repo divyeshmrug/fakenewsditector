@@ -1,10 +1,8 @@
 import 'dotenv/config'; // Load env vars before anything else
 import express from 'express';
-import { createClerkClient } from '@clerk/backend';
 import dbConnect from './src/lib/mongodb';
 import Chat from './src/models/Chat';
 import { saveToSQLite, findInSQLite, ChatData } from './src/lib/sqlite';
-
 const app = express();
 const PORT = 3001;
 
@@ -14,7 +12,7 @@ app.use(express.json());
 // CORS Middleware (since cors package is not installed)
 app.use((req, res, next) => {
     // Allow requests from the Vite dev server
-    const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174'];
+    const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'];
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
         res.setHeader('Access-Control-Allow-Origin', origin);
@@ -32,31 +30,14 @@ app.use((req, res, next) => {
     next();
 });
 
-// Initialize Clerk Client
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
-
-// Authentication Middleware
+// Simple Auth Middleware for Local Mode
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    try {
-        const authState = await clerk.authenticateRequest(req as any, {
-            jwtKey: process.env.CLERK_JWT_KEY,
-            authorizedParties: ['http://localhost:5173', 'http://localhost:5174'] // Optional
-        });
-
-        if (authState.status === 'signed-in') {
-            (req as any).auth = authState.toAuth();
-            next();
-        } else {
-            // For development, we might want to allow unauthenticated access if needed, 
-            // but keeping it strict to match production logic.
-            // However, for "fast replay" if auth is failing locally, we might need a fallback.
-            // Let's try strict first.
-            res.status(401).json({ success: false, error: 'Unauthorized' });
-        }
-    } catch (err) {
-        console.error('Auth verification failed:', err);
-        res.status(401).json({ success: false, error: 'Unauthorized', details: (err as any).message });
-    }
+    // In local mode, we just assign the same hardcoded user ID as the frontend uses
+    (req as any).auth = {
+        userId: 'local_user_123',
+        sessionId: 'local_session'
+    };
+    next();
 };
 
 // Routes

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth as useClerk } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
 import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../services/secureApi';
 // ... other imports ...
 import { checkFacts, type FactCheckResult } from '../services/factCheckService';
@@ -10,8 +10,9 @@ import { useSettings } from '../context/SettingsContext';
 import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History } from 'lucide-react';
 
 const Dashboard = () => {
-    const { getToken } = useClerk();
+    const { user } = useAuth();
     const { keys } = useSettings();
+
     // ... state ...
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
@@ -27,8 +28,8 @@ const Dashboard = () => {
     }, []);
 
     const loadHistory = async () => {
-        const token = await getToken();
-        const data = await fetchChatHistory(token || undefined);
+        // No token needed for local auth
+        const data = await fetchChatHistory(undefined);
         setHistory(data);
     };
 
@@ -44,10 +45,10 @@ const Dashboard = () => {
         setAltData(null);
 
         try {
-            const token = await getToken();
+            // No token needed
 
             // 0. CHECK CACHE FIRST to save API limits
-            const cachedResult = await checkCache(text, token || undefined);
+            const cachedResult = await checkCache(text, undefined);
             if (cachedResult) {
                 console.log("Using cached result for:", text);
                 setResult({
@@ -112,7 +113,7 @@ const Dashboard = () => {
                     score: aiData.score,
                     reason: aiData.reason,
                     factCheck: databaseResult.found ? databaseResult : undefined
-                }, token || undefined);
+                }, undefined);
                 loadHistory(); // Refresh history
             } catch (saveErr) {
                 console.error('Failed to save to history:', saveErr);
@@ -151,7 +152,7 @@ const Dashboard = () => {
     return (
         <div className="w-full h-full min-h-[calc(100vh-80px)] p-6 bg-gray-900 flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl font-black mb-8 text-center bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent tracking-tighter">
-                AUTHENTICITY ENGINE
+                AXIANT AUTHENTICITY ENGINE
             </h1>
 
             <div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">

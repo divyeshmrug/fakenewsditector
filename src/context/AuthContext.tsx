@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
+
 
 interface User {
     id: string;
@@ -18,38 +18,45 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const { user: clerkUser, isLoaded: isUserLoaded } = useUser();
-    const { isSignedIn } = useClerkAuth();
-    const { signOut, openSignIn } = useClerk();
+    // Initialize state from localStorage if available
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+        return localStorage.getItem('isAuthenticated') === 'true';
+    });
 
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-    const [user, setUser] = useState<User | null>(null);
-    const [userRole, setUserRole] = useState<'user' | 'admin' | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
 
-    useEffect(() => {
-        if (isUserLoaded) {
-            setIsAuthenticated(!!isSignedIn);
-            if (clerkUser) {
-                setUser({
-                    id: clerkUser.id,
-                    username: clerkUser.username || clerkUser.firstName || 'User',
-                    email: clerkUser.primaryEmailAddress?.emailAddress || '',
-                });
-                // Assuming admin check based on email or some metadata
-                setUserRole(clerkUser.primaryEmailAddress?.emailAddress === 'divyesh@veritas.ai' || clerkUser.username === 'divyesh' ? 'admin' : 'user');
-            } else {
-                setUser(null);
-                setUserRole(null);
-            }
-        }
-    }, [clerkUser, isUserLoaded, isSignedIn]);
+    const [userRole, setUserRole] = useState<'user' | 'admin' | null>(() => {
+        return (localStorage.getItem('userRole') as 'user' | 'admin') || null;
+    });
 
     const login = () => {
-        openSignIn();
+        const dummyUser: User = {
+            id: 'local_user_123',
+            username: 'Demo User',
+            email: 'demo@veritas.ai'
+        };
+        const role = 'admin'; // Default to admin for easier testing
+
+        setIsAuthenticated(true);
+        setUser(dummyUser);
+        setUserRole(role);
+
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('user', JSON.stringify(dummyUser));
+        localStorage.setItem('userRole', role);
     };
 
-    const logout = async () => {
-        await signOut();
+    const logout = () => {
+        setIsAuthenticated(false);
+        setUser(null);
+        setUserRole(null);
+
+        localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
     };
 
     return (

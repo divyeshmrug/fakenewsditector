@@ -1,34 +1,38 @@
-import { SignIn } from '@clerk/clerk-react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import Logo from '../components/Logo';
 
 const Login = () => {
+    const { login } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogin = () => {
+        login();
+        navigate('/dashboard');
+    };
+
     return (
         <div className="flex flex-col justify-center items-center h-[calc(100vh-200px)]">
-            <SignIn
-                routing="path"
-                path="/login"
-                signUpUrl="/register"
-                forceRedirectUrl="/dashboard"
-                appearance={{
-                    elements: {
-                        rootBox: "w-full max-w-md",
-                        card: "bg-gray-800 border border-gray-700 shadow-2xl rounded-xl",
-                        headerTitle: "text-white",
-                        headerSubtitle: "text-gray-400",
-                        socialButtonsBlockButton: "bg-gray-700 border-gray-600 text-white hover:bg-gray-600",
-                        formButtonPrimary: "bg-blue-600 hover:bg-blue-700 text-white",
-                        formFieldLabel: "text-gray-400",
-                        formFieldInput: "bg-gray-900 border-gray-700 text-white",
-                        footerActionText: "text-gray-400",
-                        footerActionLink: "text-blue-500 hover:text-blue-400",
-                        footer: "hidden",
-                        footerAction: "hidden"
-                    }
-                }}
-            />
-            <div className="mt-4 text-gray-500 text-xs font-bold uppercase tracking-widest flex items-center">
-                <div className="w-8 h-[1px] bg-gray-700 mr-3"></div>
-                Secured by fnd.auth
-                <div className="w-8 h-[1px] bg-gray-700 ml-3"></div>
+            <div className="mb-8 flex flex-col items-center">
+                <Logo size={80} className="mb-4 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]" />
+                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic">Axiant Intelligence</h1>
+            </div>
+            <div className="bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-gray-700/50 max-w-md w-full">
+                <h2 className="text-2xl font-bold text-white mb-2 text-center">Welcome Back</h2>
+                <p className="text-gray-400 text-center mb-8">Sign in to access the Axiant Authenticity Engine.</p>
+
+                <button
+                    onClick={handleLogin}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
+                >
+                    Sign In as Demo User
+                </button>
+
+                <div className="mt-6 text-center text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center justify-center">
+                    <div className="w-8 h-[1px] bg-gray-700 mr-3"></div>
+                    Local Auth Mode
+                    <div className="w-8 h-[1px] bg-gray-700 ml-3"></div>
+                </div>
             </div>
         </div>
     );
