@@ -53,7 +53,7 @@ const Dashboard = () => {
 
             // 0. CHECK CACHE FIRST to save API limits (Only if no image is being analyzed)
             if (!base64Image) {
-                const cachedResult = await checkCache(text, undefined);
+                const cachedResult = await checkCache(text, token || undefined);
                 if (cachedResult) {
                     console.log("Using cached result for:", text);
                     setResult({
@@ -201,6 +201,14 @@ const Dashboard = () => {
                                     src={`data:image/jpeg;base64,${base64Image}`}
                                     className="max-h-[70%] rounded-lg mb-4 shadow-2xl"
                                     alt="Analysis target"
+                                />
+                                <div className="flex space-x-4">
+                                    <button
+                                        onClick={clearImage}
+                                        className="text-xs font-black uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg hover:bg-red-500/30 transition"
+                                    >
+                                        Remove Image
+                                    </button>
                                     <span className="text-xs font-black uppercase tracking-widest text-cyan-400 bg-cyan-950 px-4 py-2 rounded-lg border border-cyan-500/30">
                                         Vision AI Active
                                     </span>
@@ -209,7 +217,7 @@ const Dashboard = () => {
                         )}
                         <textarea
                             className="w-full h-full bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
-                            placeholder={t('placeholder')}
+                            placeholder="Paste text or headline to verify..."
                             value={text}
                             onChange={(e) => setText(e.target.value)}
                         />
@@ -244,6 +252,7 @@ const Dashboard = () => {
                                     <Loader2 className="animate-spin" size={24} />
                                     <span className="tracking-widest">ANALYZING</span>
                                 </>
+                            ) : (
                                 <>
                                     <Send size={24} />
                                     <span className="tracking-widest">VERIFY NOW</span>
