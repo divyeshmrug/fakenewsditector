@@ -180,10 +180,18 @@ const Dashboard = () => {
             };
             reader.readAsDataURL(file);
 
-            const extractedText = await extractTextFromImage(file);
-            setText(extractedText);
+            // Try to extract text via OCR, but don't block if it fails
+            try {
+                const extractedText = await extractTextFromImage(file);
+                if (extractedText && extractedText.trim()) {
+                    setText(extractedText);
+                }
+            } catch (ocrErr) {
+                console.warn('OCR extraction failed (non-blocking):', ocrErr);
+                // Continue without extracted text - Vision AI will still work
+            }
         } catch (err) {
-            console.error(err);
+            console.error('Image upload failed:', err);
         } finally {
             setOcrLoading(false);
         }
