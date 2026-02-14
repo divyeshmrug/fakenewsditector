@@ -47,7 +47,7 @@ const fetchNewsFromOrg = async (query: string, apiKey?: string): Promise<NewsRes
     try {
         if (!apiKey) return { found: false };
         const response = await axios.get('https://newsapi.org/v2/everything', {
-            params: { q: query, apiKey: apiKey, language: 'en', pageSize: 1, sortBy: 'relevancy' }
+            params: { q: query, apiKey: apiKey, pageSize: 1, sortBy: 'relevancy' }
         });
 
         const articles = response.data.articles;
@@ -77,7 +77,7 @@ const fetchNewsFromOrg = async (query: string, apiKey?: string): Promise<NewsRes
 const fetchSerperNews = async (query: string, apiKey?: string): Promise<NewsResult> => {
     try {
         if (!apiKey) return { found: false };
-        const response = await axios.post('https://google.serper.dev/news', { q: query, gl: 'in', hl: 'en', num: 1 }, {
+        const response = await axios.post('https://google.serper.dev/news', { q: query, num: 1 }, {
             headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' }
         });
 
@@ -106,7 +106,7 @@ const fetchGNews = async (query: string, apiKey?: string): Promise<NewsResult> =
     try {
         if (!apiKey) return { found: false };
         const response = await axios.get('https://gnews.io/api/v4/search', {
-            params: { q: query, token: apiKey, lang: 'en', max: 1, sortby: 'relevance' }
+            params: { q: query, token: apiKey, max: 1, sortby: 'relevance' }
         });
 
         const articles = response.data.articles;

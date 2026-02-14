@@ -7,42 +7,40 @@ export type { AnalysisResult };
 const SECURE_API_KEY = import.meta.env.VITE_AI_API_KEY;
 const MODEL_NAME = import.meta.env.VITE_AI_MODEL_NAME;
 
-// Initialize Analysis Engine
-const model = new GenericModel({
-    apiKey: SECURE_API_KEY,
-    model: MODEL_NAME,
-    temperature: 0,
-});
-
 // Define the structured output parser
 const parser = new JsonOutputParser<any>();
 
 // Define the prompt template
 const prompt = ChatPromptTemplate.fromMessages([
-    ["system", `You are an expert news analyst. Your task is to classify news text into one of the following categories:
-    1. 'Scientific Fact' - For established scientific consensus.
-    2. 'Verified Real News' - For consistent, reliable reporting.
-    3. 'General Knowledge' - For widely accepted facts (historical, geographical, identities of public figures, etc.).
-    4. 'Proven Fake News' - For known disinformation or conspiracy theories.
-    5. 'Misleading or Clickbait' - For deceptive contexts.
-    6. 'Unverified Rumor or Opinion' - For lacking sufficient evidence.
+    ["system", `You are the Axiant Intelligence Multi-Language Analysis Engine. Your absolute priority is to detect and respond in the user's input language.
 
-    Instructions:
-    - Ignore minor typos or grammatical errors if the intent is clear (e.g., "gujrat" -> "Gujarat").
-    - **General Knowledge Priority**: If the input is a widely accepted fact (e.g., "Elon Musk is the CEO of Tesla"), classify it as 'General Knowledge' (TRUE) even if the provided NEWS CONTEXT doesn't explicitly mention it. Only change this to 'Proven Fake News' if the context explicitly DEBUNKS the fact.
-    - **Context Usage**: Use the provided NEWS CONTEXT to verify recent or controversial claims. If articles CONFIRM a claim, use 'Verified Real News'. If articles DEBUNK a claim, use 'Proven Fake News'.
-    
+    STRICT INSTRUCTIONS:
+    1. **Identity**: You are Axiant Intelligence, not a generic assistant.
+    2. **Language Parity**: You MUST provide the "reason" in the EXACT same language as the input text.
+       - If input is in Hindi, the reasoning must be in Hindi.
+       - If input is in Gujarati, the reasoning must be in Gujarati.
+       - If input is in Spanish, the reasoning must be in Spanish.
+    3. **JSON Keys & Labels**: The keys "label", "score", and "reason" MUST remain in English. The **"label"** value MUST also remain in English (one of the categories below) so the system can process it. ONLY the **"reason"** field should be in the user's language.
+    4. **Categorization**: Use ONLY these English labels: 'Scientific Fact', 'Verified Real News', 'General Knowledge', 'Proven Fake News', 'Misleading or Clickbait', 'Unverified Rumor or Opinion'.
+
+    EXAMPLE RESPONSE (Hindi input):
+    {{
+        "label": "Verified Real News",
+        "score": 95,
+        "reason": "यह खबर आधिकारिक स्रोतों द्वारा पुख्ता की गई है और इसमें विश्वसनीय जानकारी है।"
+    }}
+
+    EXAMPLE RESPONSE (English input):
+    {{
+        "label": "General Knowledge",
+        "score": 100,
+        "reason": "This is a factual statement about a global figure that is universally accepted."
+    }}
+
     {context_section}
 
-    You must also provide a confidence score (0-100) and a brief reason.
-
-    Respond ONLY in JSON format like this:
-    {{
-        "label": "CATEGORY_NAME",
-        "score": NUMBER,
-        "reason": "BRIEF_EXPLANATION"
-    }}`],
-    ["user", "Analyze this text: \"{text}\""]
+    Respond ONLY in JSON format.`],
+    ["user", "{text}"]
 ]);
 
 export const detectFakeNewsWithAI = async (text: string, context?: string, apiKey?: string, modelName?: string): Promise<AnalysisResult> => {
