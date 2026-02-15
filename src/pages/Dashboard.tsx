@@ -15,6 +15,8 @@ import ProfileModal from '../components/ProfileModal';
 import HistoryModal from '../components/HistoryModal';
 import AboutUs from '../components/AboutUs';
 import ContactUs from '../components/ContactUs';
+import SecurityPolicy from '../components/SecurityPolicy';
+import PrivacyPolicy from '../components/PrivacyPolicy';
 
 
 const Dashboard = () => {
@@ -35,6 +37,8 @@ const Dashboard = () => {
     const [showHistory, setShowHistory] = useState(false);
     const [showAboutUs, setShowAboutUs] = useState(false);
     const [showContactUs, setShowContactUs] = useState(false);
+    const [showSecurityPolicy, setShowSecurityPolicy] = useState(false);
+    const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
     const [copied, setCopied] = useState(false);
 
 
@@ -433,10 +437,24 @@ const Dashboard = () => {
                 >
                     Contact Us
                 </button>
+                <button
+                    onClick={() => setShowSecurityPolicy(true)}
+                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
+                >
+                    Security
+                </button>
+                <button
+                    onClick={() => setShowPrivacyPolicy(true)}
+                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
+                >
+                    Privacy
+                </button>
             </div>
 
             {showAboutUs && <AboutUs onClose={() => setShowAboutUs(false)} />}
             {showContactUs && <ContactUs onClose={() => setShowContactUs(false)} />}
+            {showSecurityPolicy && <SecurityPolicy onClose={() => setShowSecurityPolicy(false)} />}
+            {showPrivacyPolicy && <PrivacyPolicy onClose={() => setShowPrivacyPolicy(false)} />}
         </div >
     );
 };
