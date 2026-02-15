@@ -136,4 +136,22 @@ export const saveUserToSQLite = (user: UserData) => {
   );
 };
 
+export const findUserInSQLite = (email: string) => {
+  const stmt = db.prepare('SELECT * FROM users WHERE email = ?');
+  const user = stmt.get(email) as any;
+  if (user) {
+    return {
+      ...user,
+      _id: user.id, // Map for Mongoose compatibility
+      isVerified: user.isVerified === 1 // Convert 0/1 to boolean
+    };
+  }
+  return null;
+};
+
+export const deleteFromSQLite = (id: string) => {
+  const stmt = db.prepare('DELETE FROM user_chats WHERE id = ?');
+  return stmt.run(id);
+};
+
 export default db;

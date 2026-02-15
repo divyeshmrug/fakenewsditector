@@ -115,8 +115,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             break;
 
+        case 'DELETE':
+            try {
+                const { id } = query;
+                if (!id || typeof id !== 'string') {
+                    return res.status(400).json({ success: false, error: 'Chat ID is required' });
+                }
+
+                // Delete from MongoDB if connected
+                if (isDbConnected) {
+                    await Chat.deleteOne({ _id: id, userId });
+                }
+
+                // Always try to delete from SQLite cache
+                try {
+                    // Import dynamically to avoid circular dependency issues if any, though explicit import is better
+                    const { deleteFromSQLite } = await import('../src/lib/sqlite');
+                    deleteFromSQLite(id);
+                } catch (sqliteErr) {
+                    console.error('Failed to delete from SQLite:', sqliteErr);
+                }
+
+                res.status(200).json({ success: true, message: 'Chat deleted successfully' });
+            } catch (error: any) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+            break;
+
         default:
-            res.setHeader('Allow', ['GET', 'POST']);
+            res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
             res.status(405).end(`Method ${method} Not Allowed`);
             break;
     }

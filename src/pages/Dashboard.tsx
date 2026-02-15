@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 // import { useAuth as useClerk } from '@clerk/clerk-react'; // Removed Clerk
 import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../services/secureApi';
@@ -6,11 +6,15 @@ import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../
 import { checkFacts, type FactCheckResult } from '../services/factCheckService';
 import { fetchNews, type NewsResult } from '../services/newsService';
 import { fetchAlternativeNews, fetchAlternativeWeb, type AlternativeSearchResult } from '../services/searchService';
-import { saveChat, fetchChatHistory, checkCache, checkImageCache, type ChatRecord } from '../services/chatService';
+import { saveChat, checkCache, checkImageCache } from '../services/chatService';
 import { generateImageHash } from '../utils/imageUtils';
 import { useSettings } from '../context/SettingsContext';
 import { extractTextFromImage } from '../services/ocrService';
-import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Clock, History, Image as ImageIcon } from 'lucide-react';
+import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Image as ImageIcon, User, Clock, Copy, Check } from 'lucide-react';
+import ProfileModal from '../components/ProfileModal';
+import HistoryModal from '../components/HistoryModal';
+import AboutUs from '../components/AboutUs';
+import ContactUs from '../components/ContactUs';
 
 
 const Dashboard = () => {
@@ -27,17 +31,12 @@ const Dashboard = () => {
     const [newsData, setNewsData] = useState<NewsResult | null>(null);
     const [altData, setAltData] = useState<AlternativeSearchResult | null>(null);
     const [error, setError] = useState('');
-    const [history, setHistory] = useState<ChatRecord[]>([]);
+    const [showProfile, setShowProfile] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
+    const [showAboutUs, setShowAboutUs] = useState(false);
+    const [showContactUs, setShowContactUs] = useState(false);
+    const [copied, setCopied] = useState(false);
 
-    useEffect(() => {
-        loadHistory();
-    }, []);
-
-    const loadHistory = async () => {
-        const token = await getToken();
-        const data = await fetchChatHistory(token || undefined);
-        setHistory(data);
-    };
 
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -141,7 +140,6 @@ const Dashboard = () => {
                     reason: aiResult.reason,
                     factCheck: databaseResult
                 }, token || undefined);
-                await loadHistory();
             } catch (saveError) {
                 console.error("Failed to save to history:", saveError);
             }
@@ -207,16 +205,58 @@ const Dashboard = () => {
         }
     };
 
+    const handleCopy = () => {
+        if (result?.reason) {
+            navigator.clipboard.writeText(result.reason);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     const displayLabel = result?.label;
-    const displayScore = result?.score;
+
 
     return (
-        <div className="w-full h-full min-h-[calc(100vh-80px)] p-6 bg-gray-900 flex flex-col items-center">
-            <h1 className="text-4xl md:text-5xl font-black mb-8 text-center bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent tracking-tighter">
-                AUTHENTICITY ENGINE
-            </h1>
+        <div className="w-full h-full min-h-[calc(100vh-80px)] bg-gray-900 flex flex-col items-center relative">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-50 w-full bg-gray-900/95 backdrop-blur-xl border-b border-gray-800 px-6 py-4 flex items-center justify-between shadow-2xl mb-6">
+                <div className="flex space-x-3">
+                    <button
+                        onClick={() => setShowProfile(true)}
+                        className="bg-gray-800 hover:bg-gray-700 text-cyan-400 border border-cyan-500/30 p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
+                        title="User Profile"
+                    >
+                        <User size={22} />
+                    </button>
+                    <button
+                        onClick={() => setShowHistory(true)}
+                        className="bg-gray-800 hover:bg-gray-700 text-indigo-400 border border-indigo-500/30 p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
+                        title="Analysis History"
+                    >
+                        <Clock size={22} />
+                    </button>
+                </div>
 
-            <div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow">
+                <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent tracking-tighter absolute left-1/2 transform -translate-x-1/2">
+                    AUTHENTICITY ENGINE
+                </h1>
+
+                <div className="w-[88px] hidden md:block"></div>
+            </div>
+
+            {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+
+            {showHistory && <HistoryModal
+                onClose={() => setShowHistory(false)}
+                onSelectHistory={(chat) => {
+                    setText(chat.text);
+                    setResult({ label: chat.label as any, score: chat.score, reason: chat.reason });
+                    setFactCheck(chat.factCheck || null);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+            />}
+
+            <div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow p-6 pt-2">
                 {/* Input Section */}
                 <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-gray-700/50 flex flex-col">
                     <label className="text-gray-400 text-sm font-bold mb-4 flex items-center uppercase tracking-widest">
@@ -308,13 +348,20 @@ const Dashboard = () => {
                                 {displayLabel}
                             </h2>
 
-                            <div className="text-white text-xl font-bold mb-8 bg-gray-900/80 px-8 py-3 rounded-full border border-gray-700 shadow-lg">
-                                VERDICT ACCURACY: <span className={getResultColor(displayLabel)}>{displayScore}%</span>
-                            </div>
+
 
                             <div className="bg-gray-950/80 border border-gray-700/50 rounded-2xl p-8 max-w-lg w-full mb-8 text-left backdrop-blur-sm relative shadow-2xl">
                                 <div className={`absolute top-0 left-0 w-1.5 h-full rounded-l-2xl ${displayLabel === 'TRUE' ? 'bg-green-500' : (displayLabel === 'UNVERIFIED' ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
-                                <h3 className="text-gray-500 text-xs font-black uppercase tracking-[0.2em] mb-4">Core Reasoning</h3>
+                                <div className="flex justify-between items-start mb-4">
+                                    <h3 className="text-gray-500 text-xs font-black uppercase tracking-[0.2em]">Core Reasoning</h3>
+                                    <button
+                                        onClick={handleCopy}
+                                        className="text-gray-500 hover:text-cyan-400 transition-colors"
+                                        title="Copy reasoning"
+                                    >
+                                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                                    </button>
+                                </div>
                                 <p className="text-gray-100 text-lg leading-relaxed font-semibold">
                                     {result?.reason}
                                     {(newsData?.found || altData?.found || factCheck?.found) && (
@@ -333,18 +380,20 @@ const Dashboard = () => {
                                         <span className="font-black text-xs uppercase tracking-widest">Archive Record Found</span>
                                     </div>
                                     <p className="text-gray-400 text-sm italic font-medium leading-relaxed line-clamp-2">
-                                        "{factCheck.text}"
+                                        "{factCheck?.text}"
                                     </p>
                                     <div className="mt-4 flex items-center justify-between border-t border-cyan-500/10 pt-4">
-                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">Database Rating: {factCheck.rating}</span>
-                                        <a
-                                            href={factCheck.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-black uppercase tracking-tighter border-b border-cyan-400/50"
-                                        >
-                                            View Documentation →
-                                        </a>
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">Database Rating: {factCheck?.rating}</span>
+                                        {factCheck?.url && (
+                                            <a
+                                                href={factCheck.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] text-cyan-400 hover:text-cyan-300 font-black uppercase tracking-tighter border-b border-cyan-400/50"
+                                            >
+                                                View Documentation →
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -368,51 +417,27 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* History Section */}
-            <div className="w-full max-w-[1600px] mt-12 bg-gray-800/30 backdrop-blur-sm rounded-3xl p-8 border border-gray-700/30">
-                <div className="flex items-center mb-6 text-cyan-400">
-                    <History className="mr-3" size={24} />
-                    <h2 className="text-2xl font-black uppercase tracking-widest">Analysis History</h2>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {history.length > 0 ? (
-                        history.map((chat) => (
-                            <div
-                                key={chat._id}
-                                onClick={() => {
-                                    setText(chat.text);
-                                    setResult({ label: chat.label as any, score: chat.score, reason: chat.reason });
-                                    setFactCheck(chat.factCheck || null);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
-                                className="bg-gray-900/50 border border-gray-700/50 p-6 rounded-2xl cursor-pointer hover:border-cyan-500/50 transition-all group"
-                            >
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className={`text-xs font-black uppercase tracking-widest ${getResultColor(chat.label)}`}>
-                                        {chat.label}
-                                    </span>
-                                    <span className="text-[10px] text-gray-500 font-bold uppercase">
-                                        {chat.createdAt ? new Date(chat.createdAt).toLocaleDateString() : 'Recent'}
-                                    </span>
-                                </div>
-                                <p className="text-gray-200 text-sm font-medium line-clamp-2 mb-3">
-                                    "{chat.text}"
-                                </p>
-                                <div className="flex items-center text-gray-400 text-[10px] font-black uppercase tracking-tighter group-hover:text-cyan-400 transition-colors">
-                                    Load Full Analysis →
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="col-span-full py-12 text-center text-gray-600 border-2 border-dashed border-gray-700/30 rounded-3xl">
-                            <Clock size={48} className="mx-auto mb-4 opacity-20" />
-                            <p className="font-bold uppercase tracking-widest text-xs">No analysis records yet</p>
-                        </div>
-                    )}
-                </div>
+
+            {/* Footer with About Us Link */}
+            <div className="w-full text-center py-6 border-t border-gray-800 mt-8 flex justify-center space-x-8">
+                <button
+                    onClick={() => setShowAboutUs(true)}
+                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
+                >
+                    About Us
+                </button>
+                <button
+                    onClick={() => setShowContactUs(true)}
+                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
+                >
+                    Contact Us
+                </button>
             </div>
-        </div>
+
+            {showAboutUs && <AboutUs onClose={() => setShowAboutUs(false)} />}
+            {showContactUs && <ContactUs onClose={() => setShowContactUs(false)} />}
+        </div >
     );
 };
 

@@ -58,6 +58,12 @@ const wrap = (fn: any) => (req: any, res: any, next: any) => {
 
 // Adapter for Vercel handler
 app.all('/api/chats', wrap(chatHandler));
+// Handle parameterized routes for delete/update
+app.all('/api/chats/:id', (req, res, next) => {
+    // Forward the ID as a query param to the handler since Vercel functions use query for path params
+    req.query.id = req.params.id;
+    return wrap(chatHandler)(req, res, next);
+});
 app.post('/api/fact-check', wrap(factCheckHandler));
 
 // Auth Routes
@@ -67,6 +73,10 @@ app.post('/api/auth/verify', wrap(auth.verify));
 app.post('/api/auth/login', wrap(auth.login));
 app.post('/api/auth/forgot-password', wrap(auth.forgotPassword));
 app.post('/api/auth/reset-password', wrap(auth.resetPassword));
+
+// Sync Route
+import syncHandler from './api/sync';
+app.all('/api/sync', wrap(syncHandler));
 
 // Cache Sync Function
 import dbConnect from './src/lib/mongodb';

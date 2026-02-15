@@ -72,3 +72,15 @@ export const checkImageCache = async (imageHash: string, token?: string): Promis
         return null;
     }
 };
+
+export const deleteChat = async (id: string, token?: string) => {
+    try {
+        const response = await axios.delete(`/api/chats/${id}`, {
+            headers: getHeaders(token)
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to delete chat:', error);
+        throw error;
+    }
+};

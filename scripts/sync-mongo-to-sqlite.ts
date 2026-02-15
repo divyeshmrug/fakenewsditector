@@ -60,6 +60,7 @@ async function syncToSqlite() {
         const users = await User.find({}).lean();
         console.log(`📂 Found ${users.length} users in MongoDB.`);
 
+        // 1. Insert/Update
         const insertUser = db.prepare(`
             INSERT OR REPLACE INTO users (id, username, email, password, isVerified)
             VALUES (?, ?, ?, ?, ?)
@@ -79,13 +80,23 @@ async function syncToSqlite() {
             }
         });
         userTx(users);
-        console.log(`✅ Synced ${userCount} users.`);
+        console.log(`✅ Upserted ${userCount} users.`);
+
+        // 2. Delete missing users
+        const mongoUserIds = users.map(u => u._id.toString());
+        if (mongoUserIds.length > 0) {
+            const deleteUserStmt = db.prepare(`DELETE FROM users WHERE id NOT IN (${mongoUserIds.map(() => '?').join(',')})`);
+            const info = deleteUserStmt.run(...mongoUserIds);
+            if (info.changes > 0) console.log(`🗑️ Deleted ${info.changes} users from SQLite (not in Mongo).`);
+        } else {
+            // If Mongo is empty, clear SQLite
+            db.prepare('DELETE FROM users').run();
+            console.log('🗑️ Deleted all users from SQLite (Mongo is empty).');
+        }
 
 
         // --- SYNC CHATS ---
         console.log('💬 Syncing Chat History...');
-        // We need to fetch chat history. Note: Chat model might not be imported yet.
-        // Let's import it dynamically or assume the schema matches locally.
         const chats = await mongoose.connection.collection('chats').find({}).toArray();
         console.log(`📂 Found ${chats.length} chats in MongoDB.`);
 
@@ -113,7 +124,24 @@ async function syncToSqlite() {
             }
         });
         chatTx(chats);
-        console.log(`✅ Synced ${chatCount} chats.`);
+        console.log(`✅ Upserted ${chatCount} chats.`);
+
+        // Delete missing chats
+        const mongoChatIds = chats.map(c => c._id.toString());
+        if (mongoChatIds.length > 0) {
+            // Batch delete might be needed for very large datasets, but for now this is fine
+            // SQLite limit is usually high enough, but let's be safe and catch errors if needed
+            try {
+                const deleteChatStmt = db.prepare(`DELETE FROM user_chats WHERE id NOT IN (${mongoChatIds.map(() => '?').join(',')})`);
+                const info = deleteChatStmt.run(...mongoChatIds);
+                if (info.changes > 0) console.log(`🗑️ Deleted ${info.changes} chats from SQLite.`);
+            } catch (e) {
+                console.warn('⚠️ Batch delete failed (too many params?), skipping pruning for now.');
+            }
+        } else {
+            db.prepare('DELETE FROM user_chats').run();
+            console.log('🗑️ Deleted all chats from SQLite.');
+        }
 
         // --- SYNC FACTS ---
         console.log('🧠 Syncing Fact Checks...');
@@ -132,8 +160,6 @@ async function syncToSqlite() {
             for (const fact of factsToSync) {
                 try {
                     const query = fact.query;
-
-                    // Reconstruct the 'data' JSON object expected by the app
                     const dataObj = {
                         text: fact.text,
                         claimant: fact.claimant,
@@ -143,23 +169,37 @@ async function syncToSqlite() {
                         url: fact.url,
                         source: fact.source || 'mongo-sync'
                     };
-
                     insertStmt.run(query, JSON.stringify(dataObj));
                     syncedCount++;
                 } catch (err: any) {
-                    console.error(`❌ Failed to sync query "${fact.query}":`, err.message);
+                    // console.error(`❌ Failed to sync query "${fact.query}":`, err.message);
                     errorCount++;
                 }
             }
         });
 
         runTransaction(facts);
+        console.log(`✅ Upserted ${syncedCount} facts.`);
+
+        // Delete missing facts
+        const mongoQueries = facts.map(f => f.query);
+        if (mongoQueries.length > 0) {
+            try {
+                const deleteFactStmt = db.prepare(`DELETE FROM fact_cache WHERE query NOT IN (${mongoQueries.map(() => '?').join(',')})`);
+                const info = deleteFactStmt.run(...mongoQueries);
+                if (info.changes > 0) console.log(`🗑️ Deleted ${info.changes} facts from SQLite.`);
+            } catch (e) {
+                console.warn('⚠️ Batch delete failed for facts.');
+            }
+        } else {
+            db.prepare('DELETE FROM fact_cache').run();
+            console.log('🗑️ Deleted all facts from SQLite.');
+        }
 
         console.log(`\n\n🎉 Reverse Sync Complete!`);
         console.log(`✅ Users Synced: ${userCount}`);
         console.log(`✅ Chats Synced: ${chatCount}`);
         console.log(`✅ Facts Synced: ${syncedCount}`);
-
     } catch (error) {
         console.error('❌ Fatal Sync Error:', error);
     } finally {

@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import User from '../src/models/User';
-import { saveUserToSQLite } from '../src/lib/sqlite';
+import { saveUserToSQLite, findUserInSQLite } from '../src/lib/sqlite';
 import { sendOTP, sendMail, sendWelcomeEmail, sendPasswordResetEmail } from '../src/lib/mail';
 import dbConnect from '../src/lib/mongodb';
 
@@ -101,12 +101,36 @@ export const verify = async (req: Request, res: Response) => {
 };
 
 export const login = async (req: Request, res: Response) => {
-    await dbConnect();
+    // Try connecting to Mongo, but don't crash if it fails
+    try {
+        await dbConnect();
+    } catch (e) {
+        console.warn('MongoDB connection failed, attempting offline mode...');
+    }
+
     const { email, password } = req.body;
     console.log(`[Auth] Login attempt for: ${email}`);
 
     try {
-        const user = await User.findOne({ email });
+        let user: any = null;
+
+        // 1. Try MongoDB
+        try {
+            user = await User.findOne({ email });
+        } catch (mongoErr) {
+            console.warn('[Auth] MongoDB find failed:', mongoErr);
+        }
+
+        // 2. Fallback to SQLite if not found or Mongo failed
+        if (!user) {
+            console.log('[Auth] User not found in Mongo (or Mongo down). Checking SQLite...');
+            user = findUserInSQLite(email);
+            if (user) {
+                console.log('[Auth] Found user in SQLite cache!');
+                // SQLite user object from findUserInSQLite is already normalized with _id
+            }
+        }
+
         if (!user) {
             console.log(`[Auth] User not found: ${email}`);
             return res.status(400).json({ success: false, message: 'Invalid credentials' });
