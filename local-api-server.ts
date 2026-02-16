@@ -60,8 +60,8 @@ const wrap = (fn: any) => (req: any, res: any, next: any) => {
 app.all('/api/chats', wrap(chatHandler));
 // Handle parameterized routes for delete/update
 app.all('/api/chats/:id', (req, res, next) => {
-    // Forward the ID as a query param to the handler since Vercel functions use query for path params
-    req.query.id = req.params.id;
+    // Forward to handler. req.params.id is now checked directly in the handler.
+    console.log('[Server] Route hit: /api/chats/:id', req.params.id);
     return wrap(chatHandler)(req, res, next);
 });
 app.post('/api/fact-check', wrap(factCheckHandler));

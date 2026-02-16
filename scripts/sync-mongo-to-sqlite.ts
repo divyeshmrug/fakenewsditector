@@ -26,8 +26,8 @@ if (!MONGODB_URI) {
 }
 
 // SQLite Configuration
-const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
-const db = new Database(dbPath); // Read-Write Mode
+const dbPath = path.resolve(process.cwd(), 'chat_cache_v2.sqlite');
+const db = new Database(dbPath, { timeout: 20000 }); // Read-Write Mode with 20s timeout
 
 async function syncToSqlite() {
     console.log('🔄 Starting Reverse Sync: MongoDB -> SQLite...');
@@ -47,10 +47,23 @@ async function syncToSqlite() {
             );
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
+                publicId TEXT,
                 username TEXT NOT NULL,
                 email TEXT NOT NULL UNIQUE,
                 password TEXT NOT NULL,
                 isVerified INTEGER DEFAULT 0,
+                createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS user_chats (
+                id TEXT PRIMARY KEY,
+                userId TEXT,
+                text TEXT NOT NULL,
+                label TEXT NOT NULL,
+                score INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                factCheck TEXT,
+                base64Image TEXT,
+                imageHash TEXT,
                 createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         `);
@@ -62,8 +75,8 @@ async function syncToSqlite() {
 
         // 1. Insert/Update
         const insertUser = db.prepare(`
-            INSERT OR REPLACE INTO users (id, username, email, password, isVerified)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO users (id, publicId, username, email, password, isVerified)
+            VALUES (?, ?, ?, ?, ?, ?)
         `);
 
         let userCount = 0;
@@ -71,6 +84,7 @@ async function syncToSqlite() {
             for (const u of userList) {
                 insertUser.run(
                     u._id.toString(),
+                    u.publicId || null,
                     u.username,
                     u.email,
                     u.password,

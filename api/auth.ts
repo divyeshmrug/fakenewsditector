@@ -1,16 +1,31 @@
 
+
 import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import User from '../src/models/User';
 import { saveUserToSQLite, findUserInSQLite } from '../src/lib/sqlite';
-import { sendOTP, sendMail, sendWelcomeEmail, sendPasswordResetEmail } from '../src/lib/mail';
+import { sendOTP, sendWelcomeEmail, sendPasswordResetEmail } from '../src/lib/mail';
 import dbConnect from '../src/lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-this';
 
+import Counter from '../src/models/Counter';
+
 // Generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+
+// Generate Sequential Public ID
+const getNextSequence = async (name: string): Promise<string> => {
+    const counter = await Counter.findByIdAndUpdate(
+        name,
+        { $inc: { seq: 1 } },
+        { new: true, upsert: true }
+    );
+    // Format: axiant_intelligence_000001
+    const seqStr = counter.seq.toString().padStart(6, '0');
+    return `axiant_intelligence_${seqStr}`;
+};
 
 export const signup = async (req: Request, res: Response) => {
     await dbConnect();
@@ -26,19 +41,23 @@ export const signup = async (req: Request, res: Response) => {
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
+        const publicId = await getNextSequence('userId');
+
         const newUser = await User.create({
             username,
             email,
             password: hashedPassword,
             otp,
             otpExpires,
-            isVerified: false
+            isVerified: false,
+            publicId // Save the custom ID
         });
 
         // Dual-Write to SQLite
         try {
             saveUserToSQLite({
                 id: newUser._id.toString(),
+                publicId: newUser.publicId, // Sync custom ID
                 username: newUser.username,
                 email: newUser.email,
                 password: newUser.password,
@@ -51,7 +70,7 @@ export const signup = async (req: Request, res: Response) => {
         // Send OTP Email
         await sendOTP(email, otp);
 
-        res.status(201).json({ success: true, message: 'User created. Please verify your email.', userId: newUser._id });
+        res.status(201).json({ success: true, message: 'User created. Please verify your email.', userId: newUser._id, publicId: newUser.publicId });
     } catch (error: any) {
         console.error('Signup Error:', error);
         res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -81,6 +100,7 @@ export const verify = async (req: Request, res: Response) => {
         try {
             saveUserToSQLite({
                 id: user._id.toString(),
+                publicId: user.publicId,
                 username: user.username,
                 email: user.email,
                 password: user.password,
@@ -154,6 +174,7 @@ export const login = async (req: Request, res: Response) => {
             token,
             user: {
                 id: user._id,
+                publicId: user.publicId, // Return custom ID
                 username: user.username,
                 email: user.email
             }
@@ -206,6 +227,7 @@ export const resetPassword = async (req: Request, res: Response) => {
         try {
             saveUserToSQLite({
                 id: user._id.toString(),
+                publicId: user.publicId,
                 username: user.username,
                 email: user.email,
                 password: user.password,

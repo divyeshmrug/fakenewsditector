@@ -75,12 +75,28 @@ export const checkImageCache = async (imageHash: string, token?: string): Promis
 
 export const deleteChat = async (id: string, token?: string) => {
     try {
+        console.log('chatService: Deleting ID:', id);
         const response = await axios.delete(`/api/chats/${id}`, {
             headers: getHeaders(token)
         });
         return response.data;
     } catch (error) {
         console.error('Failed to delete chat:', error);
+        throw error;
+    }
+};
+
+export const deleteChats = async (ids: string[], token?: string) => {
+    try {
+        console.log('chatService: Deleting IDs:', ids);
+        // Use query params for DELETE to avoid body parsing issues
+        const idsParam = ids.join(',');
+        const response = await axios.delete(`/api/chats?ids=${idsParam}`, {
+            headers: getHeaders(token)
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to delete chats:', error);
         throw error;
     }
 };

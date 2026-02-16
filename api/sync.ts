@@ -30,21 +30,77 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await dbConnect();
 
         // 2. Connect to SQLite
-        const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
+        const dbPath = path.resolve(process.cwd(), 'chat_cache_v2.sqlite');
         db = new Database(dbPath);
 
-        // --- PHASE 1: PULL (Mongo -> SQLite) ---
-        console.log('[Sync] Phase 1: Pulling from Cloud...');
+        // --- PHASE 1: PUSH (SQLite -> Mongo) ---
+        console.log('[Sync] Phase 1: Pushing to Cloud...');
+
+        // Chats (Only push non-guest chats)
+        const localChats = db.prepare('SELECT * FROM user_chats WHERE userId != "guest"').all() as any[];
+        for (const c of localChats) {
+            try {
+                const factCheckData = c.factCheck ? JSON.parse(c.factCheck) : undefined;
+                await Chat.findOneAndUpdate(
+                    { _id: c.id },
+                    {
+                        text: c.text,
+                        label: c.label,
+                        score: c.score,
+                        reason: c.reason,
+                        userId: c.userId,
+                        base64Image: c.base64Image,
+                        imageHash: c.imageHash,
+                        factCheck: factCheckData,
+                        createdAt: new Date(c.createdAt)
+                    },
+                    { upsert: true, new: true }
+                );
+                results.chats.pushed++;
+            } catch (err: any) {
+                results.errors.push(`Chat Push Error (${c.id}): ${err.message}`);
+            }
+        }
+
+        // Users (Push verified status back if changed locally - though uncommon)
+        const localUsers = db.prepare('SELECT * FROM users').all() as any[];
+        for (const u of localUsers) {
+            try {
+                await User.findOneAndUpdate(
+                    { email: u.email },
+                    {
+                        username: u.username,
+                        password: u.password,
+                        isVerified: u.isVerified === 1,
+                        publicId: u.publicId // Sync ID back to Mongo
+                    },
+                    { upsert: true, new: true }
+                );
+                results.users.pushed++;
+            } catch (err: any) {
+                results.errors.push(`User Push Error (${u.email}): ${err.message}`);
+            }
+        }
+
+        // --- PHASE 2: PULL (Mongo -> SQLite) ---
+        console.log('[Sync] Phase 2: Pulling from Cloud...');
 
         // Users
         const mongoUsers = await User.find({}).lean();
         const insertUser = db.prepare(`
-            INSERT OR REPLACE INTO users (id, username, email, password, isVerified)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO users (id, publicId, username, email, password, isVerified)
+            VALUES (?, ?, ?, ?, ?, ?)
         `);
         const userTx = db.transaction((users: any[]) => {
             for (const u of users) {
-                insertUser.run(u._id.toString(), u.username, u.email, u.password, u.isVerified ? 1 : 0);
+                insertUser.run(
+                    u._id.toString(),
+                    u.publicId || null,
+                    u.username,
+                    u.email,
+                    u.password,
+                    u.isVerified ? 1 : 0
+                );
                 results.users.pulled++;
             }
         });
@@ -90,54 +146,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         } else {
             db.prepare('DELETE FROM fact_cache').run();
-        }
-
-        // --- PHASE 2: PUSH (SQLite -> Mongo) ---
-        console.log('[Sync] Phase 2: Pushing to Cloud...');
-
-        // Chats (Only push non-guest chats)
-        const localChats = db.prepare('SELECT * FROM user_chats WHERE userId != "guest"').all() as any[];
-        for (const c of localChats) {
-            try {
-                const factCheckData = c.factCheck ? JSON.parse(c.factCheck) : undefined;
-                await Chat.findOneAndUpdate(
-                    { _id: c.id },
-                    {
-                        text: c.text,
-                        label: c.label,
-                        score: c.score,
-                        reason: c.reason,
-                        userId: c.userId,
-                        base64Image: c.base64Image,
-                        imageHash: c.imageHash,
-                        factCheck: factCheckData,
-                        createdAt: new Date(c.createdAt)
-                    },
-                    { upsert: true, new: true }
-                );
-                results.chats.pushed++;
-            } catch (err: any) {
-                results.errors.push(`Chat Push Error (${c.id}): ${err.message}`);
-            }
-        }
-
-        // Users (Push verified status back if changed locally - though uncommon)
-        const localUsers = db.prepare('SELECT * FROM users').all() as any[];
-        for (const u of localUsers) {
-            try {
-                await User.findOneAndUpdate(
-                    { email: u.email },
-                    {
-                        username: u.username,
-                        password: u.password,
-                        isVerified: u.isVerified === 1
-                    },
-                    { upsert: true, new: true }
-                );
-                results.users.pushed++;
-            } catch (err: any) {
-                results.errors.push(`User Push Error (${u.email}): ${err.message}`);
-            }
         }
 
         console.log('[Sync] Completed Successfully.');

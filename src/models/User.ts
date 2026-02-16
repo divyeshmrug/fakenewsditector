@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
+    publicId: string; // e.g., axiant_intelligence_123456
     username: string;
     email: string;
     password: string; // Hashed with Argon2
@@ -13,6 +14,7 @@ export interface IUser extends Document {
 }
 
 const UserSchema: Schema = new Schema({
+    publicId: { type: String, required: true, unique: true },
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },

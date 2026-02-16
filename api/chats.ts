@@ -58,7 +58,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     // 1. Check SQLite first for speed (only if it's the same user's cache)
                     const cachedInSQLite = findInSQLite(textToSearch);
                     if (cachedInSQLite && cachedInSQLite.userId === userId) {
-                        return res.status(200).json({ success: true, data: cachedInSQLite, source: 'sqlite' });
+                        // Smart Caching: Only use cache if result was TRUE
+                        const isTrue = cachedInSQLite.label === 'TRUE' ||
+                            (cachedInSQLite.factCheck && cachedInSQLite.factCheck.rating === 'True');
+
+                        if (isTrue) {
+                            return res.status(200).json({ success: true, data: cachedInSQLite, source: 'sqlite' });
+                        }
                     }
 
                     // 2. Check MongoDB
@@ -68,9 +74,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     }
 
                     if (cachedInMongo) {
-                        // Fill SQLite cache for next time
-                        saveToSQLite(cachedInMongo._id.toString(), cachedInMongo);
-                        return res.status(200).json({ success: true, data: cachedInMongo, source: 'mongodb' });
+                        // Smart Caching: Only use cache if result was TRUE
+                        const isTrue = cachedInMongo.label === 'TRUE' ||
+                            (cachedInMongo.factCheck && cachedInMongo.factCheck.rating === 'True');
+
+                        if (isTrue) {
+                            // Fill SQLite cache for next time
+                            saveToSQLite(cachedInMongo._id.toString(), cachedInMongo);
+                            return res.status(200).json({ success: true, data: cachedInMongo, source: 'mongodb' });
+                        }
                     }
 
                     return res.status(200).json({ success: true, data: null });
@@ -117,26 +129,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         case 'DELETE':
             try {
-                const { id } = query;
-                if (!id || typeof id !== 'string') {
-                    return res.status(400).json({ success: false, error: 'Chat ID is required' });
+                // Support parsing IDs from query param, body, or path params
+                const id = (query.id || req.query.id || req.body.id || ((req as any).params && (req as any).params.id)) as string;
+
+                let releaseIds: string[] = [];
+                // Check query.ids first
+                if (query.ids) {
+                    releaseIds = (query.ids as string).split(',');
+                } else if (req.body && req.body.ids) {
+                    releaseIds = req.body.ids;
+                }
+
+                console.log('[API] DELETE handler called. Debug Query:', JSON.stringify(query), 'Direct ID:', id, 'Release IDs:', releaseIds);
+
+                // Strategy: Collect all IDs to delete
+                const idsToDelete: string[] = [];
+                if (id) idsToDelete.push(id);
+                if (releaseIds && Array.isArray(releaseIds)) idsToDelete.push(...releaseIds);
+
+                if (idsToDelete.length === 0) {
+                    return res.status(400).json({ success: false, error: 'Chat ID(s) are required' });
                 }
 
                 // Delete from MongoDB if connected
                 if (isDbConnected) {
-                    await Chat.deleteOne({ _id: id, userId });
-                }
+                    await Chat.deleteMany({ _id: { $in: idsToDelete }, userId });
+                } // Ensure no hanging brace or syntax error here
 
-                // Always try to delete from SQLite cache
+                // Delete from SQLite cache
                 try {
-                    // Import dynamically to avoid circular dependency issues if any, though explicit import is better
+                    // Import dynamically to avoid circular dependency issues
                     const { deleteFromSQLite } = await import('../src/lib/sqlite');
-                    deleteFromSQLite(id);
+                    // SQLite delete might be one-by-one or we typically might need a bulk delete function in sqlite lib
+                    // For now, loop through and delete them. It's fast enough for local SQLite.
+                    for (const delId of idsToDelete) {
+                        deleteFromSQLite(delId);
+                    }
                 } catch (sqliteErr) {
                     console.error('Failed to delete from SQLite:', sqliteErr);
                 }
 
-                res.status(200).json({ success: true, message: 'Chat deleted successfully' });
+                res.status(200).json({ success: true, message: `Successfully deleted ${idsToDelete.length} chat(s)` });
             } catch (error: any) {
                 res.status(500).json({ success: false, error: error.message });
             }

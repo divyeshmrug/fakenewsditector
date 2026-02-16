@@ -35,7 +35,7 @@ const res = {
 };
 
 // 2. Insert Fake "Manual" Data into SQLite
-const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
+const dbPath = path.resolve(process.cwd(), 'chat_cache_v2.sqlite');
 const db = new Database(dbPath);
 
 const TEST_QUERY = 'Why is the sky blue check?';

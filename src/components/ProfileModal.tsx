@@ -35,11 +35,7 @@ const ProfileModal = ({ onClose }: ProfileModalProps) => {
                         <span>Logout</span>
                     </button>
 
-                    <div className="pt-4 border-t border-gray-700/50 text-center">
-                        <p className="text-xs text-gray-500 uppercase tracking-widest">
-                            Member ID: <span className="text-gray-400 font-mono">{user?.id?.substring(0, 8)}...</span>
-                        </p>
-                    </div>
+
                 </div>
             </div>
         </div>

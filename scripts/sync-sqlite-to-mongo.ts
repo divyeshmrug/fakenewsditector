@@ -27,7 +27,7 @@ if (!MONGODB_URI) {
 }
 
 // SQLite Configuration
-const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
+const dbPath = path.resolve(process.cwd(), 'chat_cache_v2.sqlite');
 const db = new Database(dbPath, { readonly: true }); // Read-only to avoid locking issues
 
 async function syncToMongo() {
@@ -90,7 +90,8 @@ async function syncToMongo() {
                     {
                         username: u.username,
                         password: u.password,
-                        isVerified: u.isVerified === 1
+                        isVerified: u.isVerified === 1,
+                        publicId: u.publicId // Sync ID back to Mongo if needed
                     },
                     { upsert: true, new: true }
                 );
