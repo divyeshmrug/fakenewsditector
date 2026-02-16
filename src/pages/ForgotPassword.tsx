@@ -22,7 +22,7 @@ const ForgotPassword = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:3001/api/auth/forgot-password', { email });
+            await axios.post('/api/auth/forgot-password', { email });
             setMessage('Verification code sent! Please checks your email.');
             setStep(2);
         } catch (err: any) {
@@ -39,7 +39,7 @@ const ForgotPassword = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:3001/api/auth/reset-password', {
+            await axios.post('/api/auth/reset-password', {
                 email,
                 otp,
                 newPassword

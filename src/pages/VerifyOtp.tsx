@@ -18,7 +18,7 @@ const VerifyOtp = () => {
         setLoading(true);
 
         try {
-            await axios.post('http://localhost:3001/api/auth/verify', { email, otp });
+            await axios.post('/api/auth/verify', { email, otp });
             // Redirect to login with success message
             navigate('/login', { state: { message: 'Verification successful! Please log in.' } });
         } catch (err: any) {

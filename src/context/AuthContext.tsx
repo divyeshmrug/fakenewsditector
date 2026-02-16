@@ -4,6 +4,7 @@ interface User {
     id: string;
     username: string;
     email: string;
+    role?: string;
 }
 
 interface AuthContextType {
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const login = async (email: string, password: string) => {
         try {
-            const response = await fetch('http://localhost:3001/api/auth/login', {
+            const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
@@ -58,7 +59,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const signup = async (username: string, email: string, password: string) => {
         try {
-            const response = await fetch('http://localhost:3001/api/auth/signup', {
+            const response = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password }),

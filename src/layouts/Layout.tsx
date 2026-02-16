@@ -6,8 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 const Layout = () => {
     const { isAuthenticated, logout, user } = useAuth();
-    // const userRole = user?.role || 'user'; // Assuming user object has role, otherwise default
-    const userRole = 'user'; // Defaulting for now as User interface in AuthContext might not have role
+    const userRole = user?.role || 'user';
     const navigate = useNavigate();
     const { t } = useTranslation();
 

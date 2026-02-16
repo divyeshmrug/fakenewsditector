@@ -5,10 +5,12 @@ const transporter = nodemailer.createTransport({
     port: parseInt(process.env.MAIL_PORT || '587'),
     secure: process.env.MAIL_SECURE === 'true', // true for 465, false for other ports
     auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASS,
+        user: process.env.MAIL_USER || process.env.EMAIL_USER,
+        pass: process.env.MAIL_PASS || process.env.EMAIL_PASS,
     },
 });
+
+console.log(`[Mail] Initializing transporter with USER: ${process.env.MAIL_USER || process.env.EMAIL_USER}`);
 
 export const sendMail = async (to: string, subject: string, text: string, html?: string) => {
     try {
