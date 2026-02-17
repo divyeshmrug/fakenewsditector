@@ -1,5 +1,6 @@
 {
     "version": 2,
+    "name": "axiant-intelligence",
     "buildCommand": "npm run build",
     "installCommand": "npm install",
     "framework": "vite",
