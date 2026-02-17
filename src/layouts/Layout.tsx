@@ -7,8 +7,7 @@ import { Button } from '../components/ui/Button';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 const Layout = () => {
-    const { isAuthenticated, logout, user } = useAuth();
-    const userRole = user?.role || 'user';
+    const { isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
     const { t } = useTranslation();
 

@@ -54,15 +54,22 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 }
 
-console.log('Google Client ID Loaded:', import.meta.env.VITE_GOOGLE_CLIENT_ID ? 'YES (Masked: ' + import.meta.env.VITE_GOOGLE_CLIENT_ID.substring(0, 10) + '...)' : 'MISSING');
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+console.log('Google Client ID Loaded:', googleClientId ? 'YES (Masked: ' + googleClientId.substring(0, 10) + '...)' : 'MISSING - Google login disabled');
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+    {googleClientId ? (
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </GoogleOAuthProvider>
+    ) : (
       <ErrorBoundary>
         <App />
       </ErrorBoundary>
-    </GoogleOAuthProvider>
+    )}
   </StrictMode>,
 )
 

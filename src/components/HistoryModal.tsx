@@ -1,4 +1,4 @@
-import { Clock, Trash2, ChevronRight, AlertCircle, FileText, X } from 'lucide-react';
+import { Clock, Trash2, ChevronRight, AlertCircle, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { fetchChatHistory, deleteChats, type ChatRecord } from '../services/chatService';
