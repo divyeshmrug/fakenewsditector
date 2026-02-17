@@ -5,6 +5,7 @@ export interface IUser extends Document {
     email: string;
     password: string; // Hashed with Argon2
     isVerified: boolean;
+    authProvider?: 'local' | 'google' | 'apple';
     otp?: string;
     otpExpires?: Date;
     resetToken?: string;
@@ -17,6 +18,7 @@ const UserSchema: Schema = new Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     isVerified: { type: Boolean, default: false },
+    authProvider: { type: String, default: 'local' },
     otp: { type: String },
     otpExpires: { type: Date },
     resetToken: { type: String },

@@ -28,12 +28,25 @@ const STORAGE_KEY = 'v_security_vault_sig';
 const SECRET_SALT = 'divyesh_guardian';
 
 const generateSignature = (data: any) => {
-    return btoa(JSON.stringify(data) + SECRET_SALT);
+    try {
+        const str = JSON.stringify(data) + SECRET_SALT;
+        // Unicode-safe btoa
+        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) =>
+            String.fromCharCode(parseInt(p1, 16))
+        ));
+    } catch (e) {
+        console.error("Failed to generate signature", e);
+        return '';
+    }
 };
 
 const verifySignature = (storedData: string) => {
+    if (!storedData) return false;
     try {
-        const decoded = atob(storedData);
+        // Unicode-safe atob
+        const decoded = decodeURIComponent(Array.prototype.map.call(atob(storedData), (c) => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
         return decoded.endsWith(SECRET_SALT);
     } catch {
         return false;
@@ -47,16 +60,21 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const encryptedData = localStorage.getItem(STORAGE_KEY);
         if (encryptedData && verifySignature(encryptedData)) {
-            if (encryptedData.includes(SECRET_SALT)) {
-                try {
-                    const rawJson = atob(encryptedData).replace(SECRET_SALT, '');
+            try {
+                // Unicode-safe atob
+                const decoded = decodeURIComponent(Array.prototype.map.call(atob(encryptedData), (c) => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                if (decoded.endsWith(SECRET_SALT)) {
+                    const rawJson = decoded.replace(SECRET_SALT, '');
                     if (rawJson) {
                         setKeys(JSON.parse(rawJson));
                     }
-                } catch (e) {
-                    console.error("Security vault corrupted, reverting to defaults.", e);
-                    localStorage.removeItem(STORAGE_KEY);
                 }
+            } catch (e) {
+                console.error("Security vault corrupted, reverting to defaults.", e);
+                localStorage.removeItem(STORAGE_KEY);
             }
         }
     }, []);

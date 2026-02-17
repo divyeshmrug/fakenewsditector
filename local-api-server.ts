@@ -71,6 +71,7 @@ import * as auth from './api/auth';
 app.post('/api/auth/signup', wrap(auth.signup));
 app.post('/api/auth/verify', wrap(auth.verify));
 app.post('/api/auth/login', wrap(auth.login));
+app.post('/api/auth/google', wrap(auth.googleLogin));
 app.post('/api/auth/forgot-password', wrap(auth.forgotPassword));
 app.post('/api/auth/reset-password', wrap(auth.resetPassword));
 

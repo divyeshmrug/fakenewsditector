@@ -17,9 +17,11 @@
   },
   "dependencies": {
     "@clerk/backend": "^2.31.0",
+    "@clerk/clerk-react": "^5.60.1",
     "@huggingface/inference": "^4.13.11",
     "@langchain/core": "^1.1.19",
     "@langchain/groq": "^1.0.4",
+    "@react-oauth/google": "^0.13.4",
     "@types/cors": "^2.8.19",
     "@vercel/node": "^5.6.2",
     "argon2": "^0.44.0",

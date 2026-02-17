@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-// import { useAuth as useClerk } from '@clerk/clerk-react'; // Removed Clerk
 import { detectFakeNewsWithAI as detectFakeNews, type AnalysisResult } from '../services/secureApi';
-// ... other imports ...
 import { checkFacts, type FactCheckResult } from '../services/factCheckService';
 import { fetchNews, type NewsResult } from '../services/newsService';
 import { fetchAlternativeNews, fetchAlternativeWeb, type AlternativeSearchResult } from '../services/searchService';
@@ -10,20 +8,26 @@ import { saveChat, checkCache, checkImageCache } from '../services/chatService';
 import { generateImageHash } from '../utils/imageUtils';
 import { useSettings } from '../context/SettingsContext';
 import { extractTextFromImage } from '../services/ocrService';
-import { Send, AlertTriangle, Loader2, Info, Search, ShieldCheck, ShieldAlert, BadgeCheck, HelpCircle, Newspaper, Image as ImageIcon, User, Clock, Copy, Check } from 'lucide-react';
+import {
+    AlertTriangle, Loader2, Info, Search, ShieldCheck,
+    ShieldAlert, BadgeCheck, HelpCircle, Newspaper,
+    Image as ImageIcon, User, Clock, Copy, Check, X,
+    ExternalLink, Brain
+} from 'lucide-react';
 import ProfileModal from '../components/ProfileModal';
 import HistoryModal from '../components/HistoryModal';
 import AboutUs from '../components/AboutUs';
 import ContactUs from '../components/ContactUs';
 import SecurityPolicy from '../components/SecurityPolicy';
 import PrivacyPolicy from '../components/PrivacyPolicy';
-
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 
 const Dashboard = () => {
     const { token } = useAuth();
     const getToken = async () => token;
     const { keys } = useSettings();
-    // ... state ...
+
     const [text, setText] = useState('');
     const [loading, setLoading] = useState(false);
     const [ocrLoading, setOcrLoading] = useState(false);
@@ -41,9 +45,8 @@ const Dashboard = () => {
     const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
     const [copied, setCopied] = useState(false);
 
-
-    const handleAnalyze = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAnalyze = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (!text.trim() && !base64Image) return;
 
         setLoading(true);
@@ -56,13 +59,10 @@ const Dashboard = () => {
         try {
             const token = await getToken();
 
-            // 0. CHECK CACHE FIRST to save API limits
             if (base64Image) {
-                // Check image cache using hash
                 const imageHash = generateImageHash(base64Image);
                 const cachedImageResult = await checkImageCache(imageHash, token || undefined);
                 if (cachedImageResult) {
-                    console.log("Using cached result for image with hash:", imageHash);
                     setResult({
                         label: cachedImageResult.label as any,
                         score: cachedImageResult.score,
@@ -73,10 +73,8 @@ const Dashboard = () => {
                     return;
                 }
             } else if (text.trim()) {
-                // Check text cache
                 const cachedResult = await checkCache(text, token || undefined);
                 if (cachedResult) {
-                    console.log("Using cached result for:", text);
                     setResult({
                         label: cachedResult.label as any,
                         score: cachedResult.score,
@@ -88,12 +86,9 @@ const Dashboard = () => {
                 }
             }
 
-            // ... verification logic ...
-            // 1. Check Official Database first
             const databaseResult = await checkFacts(text);
             setFactCheck(databaseResult);
 
-            // 2. Search Multi-Source Context in Parallel
             const [globalNews, altNews, altWeb] = await Promise.all([
                 fetchNews(text, keys.news),
                 fetchAlternativeNews(text, keys.search),
@@ -103,36 +98,29 @@ const Dashboard = () => {
             setNewsData(globalNews);
             setAltData(altNews);
 
-            // 3. Construct Context for AI
             let aiContext = 'VERIFICATION CONTEXT FROM MULTIPLE SOURCES:\n';
-
             if (databaseResult.found && databaseResult.rating) {
                 aiContext += `\n--- SOURCE: OFFICIAL VERIFICATION ---\nRating: ${databaseResult.rating}\nClaim: ${databaseResult.text}\nReviewer: ${databaseResult.publisher}\n`;
             }
-
             if (altNews.found && altNews.articles) {
                 aiContext += `\n--- SOURCE: PUBLIC NEWS ARCHIVE ---\n`;
                 altNews.articles.slice(0, 3).forEach((art: any, idx: number) => {
                     aiContext += `${idx + 1}. ${art.title}\nSnippet: ${art.snippet}\nSource: ${art.source}\n`;
                 });
             }
-
             if (altWeb.found && altWeb.articles) {
                 aiContext += `\n--- SOURCE: WEB ARCHIVE ---\n`;
                 altWeb.articles.slice(0, 3).forEach((art: any, idx: number) => {
                     aiContext += `${idx + 1}. ${art.title}\nSnippet: ${art.snippet}\n`;
                 });
             }
-
             if (globalNews.found && globalNews.topArticle) {
                 aiContext += `\n--- SOURCE: GLOBAL MEDIA ---\nTitle: ${globalNews.topArticle.title}\nDescription: ${globalNews.topArticle.description}\n`;
             }
 
-            // 4. Run AI Analysis with Enhanced Context & Vision
             const aiResult = await detectFakeNews(text, aiContext, keys.ai, import.meta.env.VITE_AI_MODEL_NAME, base64Image || undefined);
             setResult(aiResult);
 
-            // 4. Save to History (with image if present)
             try {
                 const imageHash = base64Image ? generateImageHash(base64Image) : undefined;
                 await saveChat({
@@ -150,7 +138,7 @@ const Dashboard = () => {
 
         } catch (err: any) {
             console.error('Analysis Flow Error:', err);
-            const msg = err.message || 'Failed to analyze text. Please check your connection.';
+            const msg = err.message || 'Failed to analyze content. Please check your connection.';
             setError(msg);
         } finally {
             setLoading(false);
@@ -161,21 +149,12 @@ const Dashboard = () => {
         setBase64Image(null);
     };
 
-    const getResultColor = (label: string) => {
-        switch (label) {
-            case 'TRUE': return 'text-green-400';
-            case 'FALSE': return 'text-red-400';
-            case 'MISLEADING': return 'text-orange-400';
-            default: return 'text-yellow-400';
-        }
-    };
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setOcrLoading(true);
         try {
-            // Store base64 for Vision analysis
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64String = (reader.result as string).split(',')[1];
@@ -183,15 +162,13 @@ const Dashboard = () => {
             };
             reader.readAsDataURL(file);
 
-            // Try to extract text via OCR, but don't block if it fails
             try {
                 const extractedText = await extractTextFromImage(file);
                 if (extractedText && extractedText.trim()) {
                     setText(extractedText);
                 }
             } catch (ocrErr) {
-                console.warn('OCR extraction failed (non-blocking):', ocrErr);
-                // Continue without extracted text - Vision AI will still work
+                console.warn('OCR extraction failed:', ocrErr);
             }
         } catch (err) {
             console.error('Image upload failed:', err);
@@ -200,12 +177,12 @@ const Dashboard = () => {
         }
     };
 
-    const getResultIcon = (label: string) => {
+    const getResultStyles = (label: string) => {
         switch (label) {
-            case 'TRUE': return <BadgeCheck size={80} className="text-green-400" />;
-            case 'FALSE': return <ShieldAlert size={80} className="text-red-400" />;
-            case 'MISLEADING': return <AlertTriangle size={80} className="text-orange-400" />;
-            default: return <HelpCircle size={80} className="text-yellow-400" />;
+            case 'TRUE': return { color: 'text-green-500', bg: 'bg-green-500/10', border: 'border-green-500/20', icon: <BadgeCheck size={64} className="text-green-500" /> };
+            case 'FALSE': return { color: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/20', icon: <ShieldAlert size={64} className="text-red-500" /> };
+            case 'MISLEADING': return { color: 'text-orange-500', bg: 'bg-orange-500/10', border: 'border-orange-500/20', icon: <AlertTriangle size={64} className="text-orange-500" /> };
+            default: return { color: 'text-yellow-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', icon: <HelpCircle size={64} className="text-yellow-500" /> };
         }
     };
 
@@ -217,39 +194,248 @@ const Dashboard = () => {
         }
     };
 
-    const displayLabel = result?.label;
-
+    const styles = result ? getResultStyles(result.label) : null;
 
     return (
-        <div className="w-full h-full min-h-[calc(100vh-80px)] bg-gray-900 flex flex-col items-center relative">
-            {/* Sticky Header */}
-            <div className="sticky top-0 z-50 w-full bg-gray-900/95 backdrop-blur-xl border-b border-gray-800 px-6 py-4 flex items-center justify-between shadow-2xl mb-6">
-                <div className="flex space-x-3">
-                    <button
-                        onClick={() => setShowProfile(true)}
-                        className="bg-gray-800 hover:bg-gray-700 text-cyan-400 border border-cyan-500/30 p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
-                        title="User Profile"
-                    >
-                        <User size={22} />
-                    </button>
-                    <button
-                        onClick={() => setShowHistory(true)}
-                        className="bg-gray-800 hover:bg-gray-700 text-indigo-400 border border-indigo-500/30 p-2.5 rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95"
-                        title="Analysis History"
-                    >
-                        <Clock size={22} />
-                    </button>
+        <div className="flex flex-col space-y-8 pb-12 animate-reveal">
+            {/* Action Bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-text-primary">Authenticity Engine</h1>
+                    <p className="text-text-secondary mt-1 font-medium">Empowering truth in the age of misinformation</p>
                 </div>
 
-                <h1 className="text-2xl md:text-3xl font-black bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent tracking-tighter absolute left-1/2 transform -translate-x-1/2">
-                    AUTHENTICITY ENGINE
-                </h1>
-
-                <div className="w-[88px] hidden md:block"></div>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setShowHistory(true)}
+                        className="gap-2"
+                    >
+                        <Clock size={16} />
+                        History
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => setShowProfile(true)}
+                        className="gap-2"
+                    >
+                        <User size={16} />
+                        Profile
+                    </Button>
+                </div>
             </div>
 
-            {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 xl:gap-20 items-stretch">
+                {/* Input Card */}
+                <Card
+                    className="p-10 shadow-2xl border-border-primary/50 overflow-visible relative flex flex-col h-full"
+                    glow={loading || ocrLoading}
+                    glowColor="bg-apple-blue"
+                >
 
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center px-1">
+                            <label className="text-sm font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2">
+                                <Search size={14} />
+                                Input for Verification
+                            </label>
+
+                            <div className="flex items-center gap-4">
+                                {base64Image && (
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-apple-blue bg-apple-blue/10 px-3 py-1 rounded-full border border-apple-blue/20">
+                                        Vision AI Active
+                                    </span>
+                                )}
+                                <div className="text-[10px] font-bold text-text-secondary uppercase tracking-tighter opacity-50">
+                                    Supporting Global Archives
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="relative group">
+                            {base64Image && (
+                                <div className="bg-bg-secondary/80 rounded-2xl border-2 border-dashed border-apple-blue/30 p-4 mb-4 relative overflow-hidden group/img">
+                                    <img
+                                        src={`data:image/jpeg;base64,${base64Image}`}
+                                        className="max-h-80 w-auto mx-auto rounded-xl shadow-2xl transition-transform group-hover/img:scale-[1.02] duration-500"
+                                        alt="Target"
+                                    />
+                                    <button
+                                        onClick={clearImage}
+                                        className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-xl hover:scale-110 active:scale-95 transition-all opacity-0 group-hover/img:opacity-100"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="relative">
+                                <textarea
+                                    className="w-full min-h-[450px] bg-bg-secondary/50 border border-border-primary rounded-3xl p-10 text-xl text-text-primary focus:outline-none focus:ring-4 focus:ring-apple-blue/10 focus:border-apple-blue/40 transition-all resize-none font-medium leading-relaxed shadow-inner placeholder:text-text-secondary placeholder:opacity-40"
+                                    placeholder={base64Image ? "Add context or a claim about this image..." : "Paste a headline, social media post, or statement to verify its authenticity..."}
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                />
+
+                                <div className="absolute bottom-6 right-6 flex items-center gap-3">
+                                    <input
+                                        type="file"
+                                        id="image-upload"
+                                        className="hidden"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                    />
+                                    <label
+                                        htmlFor="image-upload"
+                                        className="p-4 bg-bg-primary hover:bg-bg-secondary text-text-primary border border-border-primary rounded-2xl cursor-pointer transition-all flex items-center shadow-lg group/btn hover:border-apple-blue/50"
+                                        title="Analyze Image (Vision AI)"
+                                    >
+                                        {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />}
+                                    </label>
+
+                                    <Button
+                                        onClick={() => handleAnalyze()}
+                                        disabled={loading || (!text.trim() && !base64Image)}
+                                        className="px-8 py-4 h-auto shadow-2xl animate-reveal"
+                                        isLoading={loading}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <Brain size={20} />
+                                            <span className="font-bold tracking-wide">VERIFY</span>
+                                        </div>
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Result Section */}
+                <div className="flex flex-col">
+                    {result ? (
+                        <div className="animate-reveal space-y-8">
+                            <Card
+                                className="p-10 shadow-2xl border-border-primary/50 relative overflow-hidden group flex flex-col items-center text-center"
+                                glow={true}
+                                glowColor={styles?.color.replace('text', 'bg')}
+                            >
+                                <div className={`absolute top-0 left-0 w-full h-1 ${styles?.color.replace('text', 'bg')} opacity-50`}></div>
+                                <div className="absolute top-2 right-2 w-48 h-48 bg-current opacity-[0.02] blur-[80px] rounded-full"></div>
+
+                                <div className="mb-6 animate-float">
+                                    {styles?.icon}
+                                </div>
+
+                                <div className={`inline-flex items-center px-4 py-1.5 rounded-full border mb-4 font-black tracking-widest text-xs uppercase ${styles?.bg} ${styles?.color} ${styles?.border}`}>
+                                    Consistency Rating: {result.score}%
+                                </div>
+
+                                <h2 className={`text-5xl font-bold mb-8 tracking-tight uppercase ${styles?.color}`}>
+                                    {result.label}
+                                </h2>
+
+                                <div className="w-full bg-bg-secondary/80 border border-border-primary rounded-3xl p-8 text-left relative shadow-inner flex-grow overflow-hidden flex flex-col">
+                                    <div className="flex justify-between items-center mb-6 px-1">
+                                        <h3 className="text-text-secondary text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                                            <Info size={12} />
+                                            Intelligence Report
+                                        </h3>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleCopy}
+                                            className="h-10 w-10 p-0 bg-bg-tertiary/50 hover:bg-bg-tertiary border border-border-primary/50 shadow-sm transition-all duration-300 active:scale-95 rounded-xl"
+                                        >
+                                            {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} className="text-text-secondary" />}
+                                        </Button>
+                                    </div>
+                                    <div className="flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-border-primary scrollbar-track-transparent">
+                                        <p className="text-text-primary text-base font-medium leading-relaxed whitespace-pre-wrap">
+                                            {result.reason}
+                                        </p>
+                                    </div>
+
+                                    {(newsData?.found || altData?.found || factCheck?.found) && (
+                                        <div className="mt-6 pt-6 border-t border-border-primary/50 flex items-center gap-3 text-apple-blue font-bold text-[10px] uppercase tracking-wider">
+                                            <div className="p-1.5 bg-apple-blue/10 rounded-lg">
+                                                <ShieldCheck size={14} />
+                                            </div>
+                                            Cross-verification confirmed via global secure archives
+                                        </div>
+                                    )}
+                                </div>
+                            </Card>
+
+                            {factCheck && factCheck.found && (
+                                <Card className="p-6 border-border-primary/30 bg-bg-secondary/30 hover:bg-bg-secondary/50 transition-colors">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-2 text-apple-blue">
+                                            <Search size={16} />
+                                            <span className="font-bold text-[10px] uppercase tracking-widest">Archive Record</span>
+                                        </div>
+                                        {factCheck.url && (
+                                            <a href={factCheck.url} target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-apple-blue transition-colors">
+                                                <ExternalLink size={14} />
+                                            </a>
+                                        )}
+                                    </div>
+                                    <p className="text-text-primary text-sm font-medium leading-relaxed mb-4 line-clamp-3">
+                                        "{factCheck.text}"
+                                    </p>
+                                    <div className="flex items-center justify-between pt-4 border-t border-border-primary/30">
+                                        <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest">
+                                            Source: {factCheck.publisher}
+                                        </span>
+                                        <span className="text-[10px] font-black text-apple-blue uppercase tracking-widest">
+                                            {factCheck.rating}
+                                        </span>
+                                    </div>
+                                </Card>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-center p-12 bg-bg-secondary/10 border border-dashed border-border-primary/50 rounded-[40px] opacity-40">
+                            <div className="w-20 h-20 bg-bg-secondary rounded-full flex items-center justify-center mb-8 shadow-inner border border-border-primary/30">
+                                <Newspaper size={40} className="text-text-secondary stroke-[1.2]" />
+                            </div>
+                            <h3 className="text-xl font-bold tracking-tight text-text-primary mb-3">Authenticity Engine</h3>
+                            <p className="text-sm text-text-secondary max-w-[240px] leading-relaxed font-medium">
+                                Paste content or upload an image to start verification.
+                            </p>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="mt-4 p-5 bg-red-500/10 border border-red-500/20 rounded-3xl text-red-500 text-sm flex items-start animate-shake">
+                            <AlertTriangle size={18} className="mr-3 shrink-0 mt-0.5" />
+                            <span className="font-semibold">{error}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Dash Footer Actions */}
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 pt-12 border-t border-border-primary">
+                {[
+                    { label: 'About Us', action: () => setShowAboutUs(true) },
+                    { label: 'Contact', action: () => setShowContactUs(true) },
+                    { label: 'Security', action: () => setShowSecurityPolicy(true) },
+                    { label: 'Privacy', action: () => setShowPrivacyPolicy(true) }
+                ].map((item) => (
+                    <button
+                        key={item.label}
+                        onClick={item.action}
+                        className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-secondary hover:text-apple-blue transition-colors"
+                    >
+                        {item.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Modals */}
+            {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
             {showHistory && <HistoryModal
                 onClose={() => setShowHistory(false)}
                 onSelectHistory={(chat) => {
@@ -259,203 +445,11 @@ const Dashboard = () => {
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
             />}
-
-            <div className="w-full max-w-[1600px] grid grid-cols-1 lg:grid-cols-2 gap-8 flex-grow p-6 pt-2">
-                {/* Input Section */}
-                <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-gray-700/50 flex flex-col">
-                    <label className="text-gray-400 text-sm font-bold mb-4 flex items-center uppercase tracking-widest">
-                        <Info className="mr-2" size={16} />
-                        Input Content
-                    </label>
-                    <div className="relative flex-grow mb-8 group flex flex-col space-y-4">
-                        {base64Image && (
-                            <div className="bg-gray-900/90 flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed border-cyan-500/50 animate-reveal">
-                                <img
-                                    src={`data:image/jpeg;base64,${base64Image}`}
-                                    className="max-h-64 rounded-lg mb-4 shadow-2xl"
-                                    alt="Analysis target"
-                                />
-                                <div className="flex space-x-4">
-                                    <button
-                                        onClick={clearImage}
-                                        className="text-xs font-black uppercase tracking-widest bg-red-500/20 text-red-400 border border-red-500/30 px-4 py-2 rounded-lg hover:bg-red-500/30 transition"
-                                    >
-                                        Remove Image
-                                    </button>
-                                    <span className="text-xs font-black uppercase tracking-widest text-cyan-400 bg-cyan-950 px-4 py-2 rounded-lg border border-cyan-500/30">
-                                        Vision AI Active
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-                        <div className="relative flex-grow">
-                            <textarea
-                                className="w-full h-full min-h-[200px] bg-gray-950/50 border border-gray-700 rounded-2xl p-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none font-medium leading-relaxed shadow-inner"
-                                placeholder={base64Image ? "Add a claim to verify with this image (optional)..." : "Paste text or headline to verify..."}
-                                value={text}
-                                onChange={(e) => setText(e.target.value)}
-                            />
-                            <div className="absolute top-4 right-4 flex space-x-2">
-                                <input
-                                    type="file"
-                                    id="image-upload"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={handleImageUpload}
-                                />
-                                <label
-                                    htmlFor="image-upload"
-                                    className="p-3 bg-gray-800/80 hover:bg-cyan-600/20 text-cyan-400 border border-gray-700 rounded-xl cursor-pointer transition-all flex items-center group/btn"
-                                    title="Extract text from image"
-                                >
-                                    {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />}
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="mt-8 flex justify-end">
-                        <button
-                            onClick={handleAnalyze}
-                            disabled={loading || (!text.trim() && !base64Image)}
-                            className={`flex items-center space-x-3 px-10 py-4 rounded-2xl font-black text-lg transition-all transform active:scale-95 shadow-xl ${loading || (!text.trim() && !base64Image)
-                                ? 'bg-gray-800 text-gray-600 cursor-not-allowed border border-gray-700'
-                                : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-950/50 border border-cyan-400/30'
-                                }`}
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="animate-spin" size={24} />
-                                    <span className="tracking-widest">ANALYZING</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Send size={24} />
-                                    <span className="tracking-widest">VERIFY NOW</span>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Result Section */}
-                <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl shadow-2xl p-8 border border-gray-700/50 flex flex-col justify-center items-center relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-[120px] rounded-full -mr-32 -mt-32 group-hover:bg-cyan-500/10 transition-colors"></div>
-
-                    {result && displayLabel ? (
-                        <div className="text-center z-10 w-full animate-fade-in-up flex flex-col items-center">
-
-                            <div className="mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-                                {getResultIcon(displayLabel)}
-                            </div>
-
-                            <h2 className={`text-7xl font-black mb-4 ${getResultColor(displayLabel)} tracking-tighter uppercase`}>
-                                {displayLabel}
-                            </h2>
-
-
-
-                            <div className="bg-gray-950/80 border border-gray-700/50 rounded-2xl p-8 max-w-lg w-full mb-8 text-left backdrop-blur-sm relative shadow-2xl">
-                                <div className={`absolute top-0 left-0 w-1.5 h-full rounded-l-2xl ${displayLabel === 'TRUE' ? 'bg-green-500' : (displayLabel === 'UNVERIFIED' ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
-                                <div className="flex justify-between items-start mb-4">
-                                    <h3 className="text-gray-500 text-xs font-black uppercase tracking-[0.2em]">Core Reasoning</h3>
-                                    <button
-                                        onClick={handleCopy}
-                                        className="text-gray-500 hover:text-cyan-400 transition-colors"
-                                        title="Copy reasoning"
-                                    >
-                                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                                    </button>
-                                </div>
-                                <p className="text-gray-100 text-lg leading-relaxed font-semibold">
-                                    {result?.reason}
-                                    {(newsData?.found || altData?.found || factCheck?.found) && (
-                                        <span className="block mt-6 text-sm text-cyan-400 font-bold border-t border-gray-800 pt-4 flex items-center">
-                                            <ShieldCheck size={16} className="mr-2" />
-                                            Unified cross-verification confirmed via multiple secure archives.
-                                        </span>
-                                    )}
-                                </p>
-                            </div>
-
-                            {factCheck && factCheck.found && (
-                                <div className="bg-cyan-900/10 border border-cyan-500/20 rounded-2xl p-6 max-w-lg w-full mb-4 text-left group/card hover:bg-cyan-900/20 transition-all">
-                                    <div className="flex items-center text-cyan-400 mb-3">
-                                        <Search size={18} className="mr-2" />
-                                        <span className="font-black text-xs uppercase tracking-widest">Archive Record Found</span>
-                                    </div>
-                                    <p className="text-gray-400 text-sm italic font-medium leading-relaxed line-clamp-2">
-                                        "{factCheck?.text}"
-                                    </p>
-                                    <div className="mt-4 flex items-center justify-between border-t border-cyan-500/10 pt-4">
-                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-tighter">Database Rating: {factCheck?.rating}</span>
-                                        {factCheck?.url && (
-                                            <a
-                                                href={factCheck.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-[10px] text-cyan-400 hover:text-cyan-300 font-black uppercase tracking-tighter border-b border-cyan-400/50"
-                                            >
-                                                View Documentation →
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="text-gray-600 flex flex-col items-center max-w-xs text-center opacity-40">
-                            <Newspaper size={120} className="mb-6 stroke-[1]" />
-                            <p className="text-2xl font-black uppercase tracking-tighter">Engine Standby</p>
-                            <p className="text-xs mt-4 font-bold uppercase tracking-widest leading-loose">
-                                Ready for multi-archive cross-verification.
-                            </p>
-                        </div>
-                    )}
-
-                    {error && (
-                        <div className="mt-6 p-5 bg-red-950/30 border border-red-500/30 rounded-2xl text-red-300 text-sm flex items-center max-w-lg shadow-2xl animate-shake">
-                            <AlertTriangle size={20} className="mr-3 flex-shrink-0 text-red-500" />
-                            <span className="font-bold tracking-tight">{error}</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-
-
-            {/* Footer with About Us Link */}
-            <div className="w-full text-center py-6 border-t border-gray-800 mt-8 flex justify-center space-x-8">
-                <button
-                    onClick={() => setShowAboutUs(true)}
-                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
-                >
-                    About Us
-                </button>
-                <button
-                    onClick={() => setShowContactUs(true)}
-                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
-                >
-                    Contact Us
-                </button>
-                <button
-                    onClick={() => setShowSecurityPolicy(true)}
-                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
-                >
-                    Security
-                </button>
-                <button
-                    onClick={() => setShowPrivacyPolicy(true)}
-                    className="text-gray-500 hover:text-cyan-400 transition-colors text-xs font-bold uppercase tracking-widest hover:underline"
-                >
-                    Privacy
-                </button>
-            </div>
-
             {showAboutUs && <AboutUs onClose={() => setShowAboutUs(false)} />}
             {showContactUs && <ContactUs onClose={() => setShowContactUs(false)} />}
             {showSecurityPolicy && <SecurityPolicy onClose={() => setShowSecurityPolicy(false)} />}
             {showPrivacyPolicy && <PrivacyPolicy onClose={() => setShowPrivacyPolicy(false)} />}
-        </div >
+        </div>
     );
 };
 
