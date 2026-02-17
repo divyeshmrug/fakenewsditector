@@ -1,9 +1,9 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
-import { getFactCache, saveFactCache } from '../src/lib/sqlite';
-import dbConnect from '../src/lib/mongodb';
-import FactCheck from '../src/models/FactCheck';
+import { getFactCache, saveFactCache } from '../src/lib/sqlite.js';
+import dbConnect from '../src/lib/mongodb.js';
+import FactCheck from '../src/models/FactCheck.js';
 
 const GOOGLE_API_KEY = process.env.VITE_CHECK_API_KEY;
 const BASE_URL = 'https://factchecktools.googleapis.com/v1alpha1/claims:search';

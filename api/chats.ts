@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
-import dbConnect from '../src/lib/mongodb';
-import Chat from '../src/models/Chat';
-import { saveToSQLite, findInSQLite, getHistoryFromSQLite, findInSQLiteByHash } from '../src/lib/sqlite';
+import dbConnect from '../src/lib/mongodb.js';
+import Chat from '../src/models/Chat.js';
+import { saveToSQLite, findInSQLite, getHistoryFromSQLite, findInSQLiteByHash } from '../src/lib/sqlite.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -195,7 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Delete from SQLite cache
                 try {
                     // Import dynamically to avoid circular dependency issues
-                    const { deleteFromSQLite } = await import('../src/lib/sqlite');
+                    const { deleteFromSQLite } = await import('../src/lib/sqlite.js');
                     // SQLite delete might be one-by-one or we typically might need a bulk delete function in sqlite lib
                     // For now, loop through and delete them. It's fast enough for local SQLite.
                     for (const delId of idsToDelete) {
