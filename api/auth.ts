@@ -242,3 +242,65 @@ export const resetPassword = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
+
+export const googleLogin = async (req: Request, res: Response) => {
+    await dbConnect();
+    const { credential } = req.body; // This is the access_token from frontend
+
+    try {
+        // 1. Verify token with Google userinfo API
+        const googleRes = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${credential}`);
+        const googleUser = await googleRes.json();
+
+        if (googleUser.error || !googleUser.email) {
+            return res.status(400).json({ success: false, message: 'Invalid Google token' });
+        }
+
+        const email = googleUser.email;
+        const username = googleUser.name || email.split('@')[0];
+
+        // 2. Find or Create User
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            // Create user for Google Login
+            const hashedPassword = await argon2.hash(Math.random().toString(36)); // Random password for social login
+            user = await User.create({
+                username,
+                email,
+                password: hashedPassword,
+                isVerified: true, // Google accounts are pre-verified
+                authProvider: 'google'
+            });
+
+            // SQLite Backup
+            try {
+                saveUserToSQLite({
+                    id: user._id.toString(),
+                    username: user.username,
+                    email: user.email,
+                    password: user.password,
+                    isVerified: true
+                });
+            } catch (e) {
+                console.error('SQLite Sync Error:', e);
+            }
+        }
+
+        // 3. Generate Token
+        const token = jwt.sign({ userId: user._id, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email
+            }
+        });
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+};

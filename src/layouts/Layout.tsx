@@ -1,8 +1,10 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useTranslation } from 'react-i18next';
+import { Button } from '../components/ui/Button';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 const Layout = () => {
     const { isAuthenticated, logout, user } = useAuth();
@@ -15,43 +17,48 @@ const Layout = () => {
         navigate('/login');
     };
 
-
     return (
-        <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col font-sans">
-            <header className="bg-gray-800 border-b border-gray-700 shadow-md sticky top-0 z-50">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <Link to="/" className="flex items-center space-x-3 text-cyan-400 hover:text-cyan-300 transition group">
-                        <Logo size={32} className="group-hover:scale-110 transition-transform duration-300" />
-                        <span className="text-2xl font-black tracking-tighter uppercase italic">Axiant Intelligence</span>
+        <div className="min-h-screen premium-dash-bg text-text-primary flex flex-col font-sans transition-colors duration-300 relative overflow-hidden">
+            <div className="noise-texture" />
+            <header className="sticky top-0 z-50 glass-panel border-b border-border-primary">
+                <div className="max-w-[1600px] mx-auto px-6 lg:px-12 xl:px-24 h-20 flex justify-between items-center text-sm">
+                    <Link to="/" className="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+                        <Logo size={32} />
+                        <span className="text-lg font-semibold tracking-tight">Axiant Intelligence</span>
                     </Link>
 
-                    <nav className="flex items-center space-x-6">
-
+                    <nav className="flex items-center space-x-4">
                         {isAuthenticated ? (
-                            <div className="flex items-center space-x-6">
-                                <div className="flex flex-col items-end border-r border-gray-700 pr-6 mr-6 hidden md:flex">
-                                    <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">Axiant Terminal</span>
-                                    <div className="flex items-center space-x-3 mt-1">
-                                        <Link to="/settings" className="text-[10px] text-cyan-400 hover:text-cyan-300 font-black uppercase tracking-[0.2em]">{t('settings')}</Link>
-                                        {userRole === 'admin' && (
-                                            <span className="text-[9px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-sm border border-purple-500/30 uppercase font-black">
-                                                Root
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <button
+                            <div className="flex items-center space-x-2 md:space-x-4">
+                                <Link to="/settings">
+                                    <Button variant="ghost" size="sm" className="hidden md:flex gap-2">
+                                        <SettingsIcon size={16} />
+                                        {t('settings')}
+                                    </Button>
+                                    <Button variant="ghost" size="sm" className="md:hidden">
+                                        <SettingsIcon size={18} />
+                                    </Button>
+                                </Link>
+
+                                <div className="h-4 w-px bg-border-primary mx-2"></div>
+
+                                <ThemeToggle />
+
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
                                     onClick={handleLogout}
-                                    className="flex items-center space-x-2 text-gray-400 hover:text-red-400 transition group"
+                                    className="text-text-secondary hover:text-red-500 gap-2"
                                 >
-                                    <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" />
-                                    <span className="text-xs font-black uppercase tracking-widest">{t('logout')}</span>
-                                </button>
+                                    <LogOut size={16} />
+                                    <span className="hidden md:inline">{t('logout')}</span>
+                                </Button>
                             </div>
                         ) : (
                             <div className="flex items-center space-x-4">
-                                <Link to="/login" className="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-xl transition font-black text-xs uppercase tracking-widest shadow-lg shadow-cyan-900/20">
-                                    Login
+                                <ThemeToggle />
+                                <Link to="/login">
+                                    <Button size="sm">Login</Button>
                                 </Link>
                             </div>
                         )}
@@ -59,17 +66,22 @@ const Layout = () => {
                 </div>
             </header>
 
-            <main className="flex-grow">
-                <Outlet />
+            <main className="flex-grow max-w-[1600px] mx-auto w-full px-6 lg:px-12 xl:px-24 py-12 relative z-10">
+                <div className="animate-reveal">
+                    <Outlet />
+                </div>
             </main>
 
-            <footer className="bg-gray-800 border-t border-gray-700 py-8 text-center text-gray-500 text-xs">
-                <div className="max-w-4xl mx-auto px-4">
-                    <p className="font-bold tracking-widest uppercase mb-4 opacity-50">&copy; {new Date().getFullYear()} Axiant Intelligence. Enterprise-Level Authenticity Guard.</p>
-                    <div className="flex justify-center space-x-8 opacity-30 font-black text-[10px] uppercase tracking-[0.3em]">
-                        <span>Secure API</span>
-                        <span>Multi-Archive</span>
-                        <span>Cluster 1 Stable</span>
+            <footer className="border-t border-border-primary py-16 bg-bg-secondary/50 relative z-10">
+                <div className="max-w-[1600px] mx-auto px-6 lg:px-12 xl:px-24 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-text-secondary text-xs font-medium">
+                    <div className="flex items-center space-x-2">
+                        <Logo size={20} className="grayscale opacity-50" />
+                        <p>&copy; {new Date().getFullYear()} Axiant Intelligence. All rights reserved.</p>
+                    </div>
+                    <div className="flex items-center space-x-8">
+                        <span className="hover:text-text-primary transition-colors cursor-default">Privacy</span>
+                        <span className="hover:text-text-primary transition-colors cursor-default">Terms</span>
+                        <span className="hover:text-text-primary transition-colors cursor-default">Security</span>
                     </div>
                 </div>
             </footer>

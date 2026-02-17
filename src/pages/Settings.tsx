@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
-import { Shield, Lock, Unlock, Save, AlertCircle, Key, RefreshCw } from 'lucide-react';
+import { Shield, Lock, Unlock, Save, AlertCircle, Key, RefreshCw, ChevronLeft } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Link } from 'react-router-dom';
 
 const Settings = () => {
     const { keys, updateKey, isLocked, unlock, lock } = useSettings();
@@ -33,110 +37,165 @@ const Settings = () => {
 
     if (isLocked) {
         return (
-            <div className="w-full h-[calc(100vh-160px)] flex items-center justify-center p-6">
-                <div className="bg-gray-800/50 backdrop-blur-xl rounded-3xl border border-gray-700/50 p-12 max-w-md w-full shadow-2xl text-center">
-                    <div className="bg-cyan-500/10 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 border border-cyan-500/20">
-                        <Lock className="text-cyan-400 animate-pulse" size={48} />
+            <div className="w-full flex items-center justify-center py-20 animate-reveal">
+                <Card className="max-w-md w-full p-10 shadow-2xl border-border-primary/50 text-center">
+                    <div className="bg-apple-blue/10 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 border border-apple-blue/20">
+                        <Lock className="text-apple-blue animate-pulse-slow" size={40} />
                     </div>
-                    <h2 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Access Restricted</h2>
-                    <p className="text-gray-400 mb-8 font-medium">Please enter the security password to manage core API keys.</p>
+
+                    <h2 className="text-3xl font-bold text-text-primary mb-3 tracking-tight">Access Restricted</h2>
+                    <p className="text-text-secondary mb-10 font-medium">Please enter the security password to manage core API infrastructure.</p>
 
                     <form onSubmit={handleUnlock} className="space-y-6">
-                        <div className="relative group">
-                            <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-cyan-400 transition-colors" size={20} />
-                            <input
-                                type="password"
-                                className="w-full bg-gray-950/50 border border-gray-700 rounded-2xl py-4 pl-14 pr-6 text-white text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all font-medium"
-                                placeholder="Security Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                        </div>
+                        <Input
+                            type="password"
+                            label="Security Password"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
 
                         {error && (
-                            <div className="flex items-center space-x-2 text-red-400 text-sm font-bold bg-red-950/20 p-3 rounded-xl border border-red-500/20 animate-shake">
-                                <AlertCircle size={16} />
+                            <div className="flex items-center gap-3 text-red-500 text-sm font-semibold bg-red-500/10 p-4 rounded-2xl border border-red-500/20 animate-shake">
+                                <AlertCircle size={18} />
                                 <span>{error}</span>
                             </div>
                         )}
 
-                        <button
+                        <Button
                             type="submit"
-                            className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 rounded-2xl transition-all transform active:scale-95 shadow-xl shadow-cyan-950/50 flex items-center justify-center space-x-3"
+                            className="w-full py-4 font-bold tracking-wide"
                         >
-                            <Unlock size={20} />
-                            <span className="tracking-widest uppercase">Unlock Access</span>
-                        </button>
+                            <div className="flex items-center gap-2">
+                                <Unlock size={18} />
+                                Unlock Configuration
+                            </div>
+                        </Button>
                     </form>
-                </div>
+                </Card>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-12">
-                <div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center">
-                        <Shield className="mr-4 text-cyan-400" size={40} />
-                        Security Settings
-                    </h1>
-                    <p className="text-gray-400 font-medium">Manage core API keys and engine configuration.</p>
+        <div className="max-w-4xl mx-auto space-y-10 animate-reveal">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-start gap-4">
+                    <div className="p-3 bg-apple-blue rounded-2xl text-white shadow-xl">
+                        <Shield size={28} />
+                    </div>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-text-primary">
+                            Security Settings
+                        </h1>
+                        <p className="text-text-secondary mt-1 font-medium">Manage decryption keys and API endpoints.</p>
+                    </div>
                 </div>
-                <button
-                    onClick={lock}
-                    className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white px-6 py-3 rounded-2xl border border-gray-700 transition-all font-bold flex items-center space-x-2"
-                >
-                    <Lock size={18} />
-                    <span>Lock Now</span>
-                </button>
+
+                <div className="flex items-center gap-3">
+                    <Link to="/dashboard">
+                        <Button variant="ghost" size="md" className="gap-2">
+                            <ChevronLeft size={16} />
+                            Back to Engine
+                        </Button>
+                    </Link>
+                    <Button
+                        variant="secondary"
+                        onClick={lock}
+                        className="gap-2"
+                    >
+                        <Lock size={16} />
+                        Lock Session
+                    </Button>
+                </div>
             </div>
 
-            <div className="bg-gray-800/50 backdrop-blur-md rounded-3xl border border-gray-700/50 p-8 shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-[120px] rounded-full -mr-32 -mt-32"></div>
+            <Card className="p-10 shadow-2xl border-border-primary/50 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-apple-blue/5 blur-[100px] rounded-full -mr-40 -mt-40 transition-colors group-hover:bg-apple-blue/10"></div>
 
-                <div className="grid gap-8 relative z-10">
-                    {Object.entries(localKeys).map(([key, value]) => (
-                        <div key={key} className="group">
-                            <label className="text-gray-500 text-xs font-black uppercase tracking-[0.2em] mb-3 block flex items-center">
-                                <Key className="mr-2 text-cyan-500/50" size={14} />
-                                {key.toUpperCase()} API KEY
-                            </label>
-                            <div className="relative">
-                                <input
+                <div className="grid gap-10 relative z-10">
+                    <div className="grid gap-8">
+                        {Object.entries(localKeys).map(([key, value]) => (
+                            <div key={key} className="space-y-2">
+                                <label className="text-text-secondary text-[10px] font-black uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+                                    <Key className="text-apple-blue/50" size={12} />
+                                    {key.toUpperCase()} API Key
+                                </label>
+                                <Input
                                     type="password"
-                                    className="w-full bg-gray-950/50 border border-gray-700 rounded-2xl py-4 px-6 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all group-hover:bg-gray-950/80"
-                                    placeholder="••••••••••••••••"
+                                    placeholder="••••••••••••••••••••••••••••••••"
                                     value={value}
                                     onChange={(e) => setLocalKeys({ ...localKeys, [key]: e.target.value })}
+                                    className="font-mono text-sm tracking-wider"
                                 />
                             </div>
+                        ))}
+                    </div>
+
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-10 border-t border-border-primary">
+                        <div className="flex items-center gap-3 text-text-secondary text-xs font-bold uppercase tracking-widest bg-bg-secondary/50 px-4 py-2 rounded-full border border-border-primary/50">
+                            <div className="relative">
+                                <RefreshCw size={14} className="animate-spin-slow" />
+                            </div>
+                            <span>Zero-Knowledge Persistence</span>
                         </div>
-                    ))}
-                </div>
 
-                <div className="mt-12 pt-8 border-t border-gray-700/50 flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-gray-500 text-xs font-bold italic uppercase tracking-widest">
-                        <RefreshCw size={14} className="animate-spin-slow" />
-                        <span>Changes are persisted locally</span>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                        {success && (
-                            <span className="text-green-400 font-bold text-sm animate-fade-in">{success}</span>
-                        )}
-                        <button
-                            onClick={handleSave}
-                            className="bg-cyan-600 hover:bg-cyan-500 text-white font-black px-10 py-4 rounded-2xl transition-all transform active:scale-95 shadow-xl shadow-cyan-950/50 flex items-center space-x-3"
-                        >
-                            <Save size={20} />
-                            <span className="tracking-widest uppercase">Save Configuration</span>
-                        </button>
+                        <div className="flex items-center gap-6 w-full md:w-auto">
+                            {success && (
+                                <div className="flex items-center gap-2 text-green-500 font-bold text-sm animate-reveal">
+                                    <CheckCircle2 size={16} />
+                                    {success}
+                                </div>
+                            )}
+                            <Button
+                                onClick={handleSave}
+                                className="w-full md:w-auto px-12 py-4 h-auto shadow-2xl font-bold tracking-wide"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Save size={18} />
+                                    Commit Changes
+                                </div>
+                            </Button>
+                        </div>
                     </div>
                 </div>
+            </Card>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="p-6 bg-yellow-500/5 border-yellow-500/20">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2 bg-yellow-500/20 rounded-xl text-yellow-600">
+                            <AlertCircle size={20} />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-yellow-800 dark:text-yellow-200">Sensitive Information</h4>
+                            <p className="text-xs text-yellow-700/70 dark:text-yellow-200/60 mt-1 leading-relaxed">
+                                API keys grant access to powerful AI models. Never share these keys with unauthorized users.
+                            </p>
+                        </div>
+                    </div>
+                </Card>
+                <Card className="p-6 bg-apple-blue/5 border-apple-blue/20">
+                    <div className="flex items-start gap-4">
+                        <div className="p-2 bg-apple-blue/20 rounded-xl text-apple-blue">
+                            <Shield size={20} />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-text-primary">Local Storage</h4>
+                            <p className="text-xs text-text-secondary mt-1 leading-relaxed">
+                                All configuration changes are stored locally in your browser's encrypted storage layer.
+                            </p>
+                        </div>
+                    </div>
+                </Card>
             </div>
         </div>
     );
 };
+
+const CheckCircle2 = ({ size, className }: { size: number, className?: string }) => (
+    <RefreshCw size={size} className={className} />
+);
 
 export default Settings;

@@ -1,5 +1,7 @@
-import { X, LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, User as UserIcon, Mail, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 interface ProfileModalProps {
     onClose: () => void;
@@ -9,36 +11,60 @@ const ProfileModal = ({ onClose }: ProfileModalProps) => {
     const { user, logout } = useAuth();
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-gray-800/90 border border-gray-700/50 rounded-2xl p-8 max-w-md w-full shadow-2xl relative animate-scale-up">
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-                >
-                    <X size={24} />
-                </button>
-
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-20 h-20 bg-cyan-900/30 rounded-full flex items-center justify-center mb-4 border border-cyan-500/30">
-                        <UserIcon size={40} className="text-cyan-400" />
+        <Modal isOpen={true} onClose={onClose} title="Profile Settings">
+            <div className="flex flex-col items-center mb-10 mt-2">
+                <div className="w-24 h-24 bg-bg-secondary rounded-full flex items-center justify-center mb-6 border border-border-primary shadow-inner relative group">
+                    <div className="absolute inset-0 bg-apple-blue/5 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <UserIcon size={44} className="text-text-primary relative z-10" />
+                    <div className="absolute -bottom-1 -right-1 bg-apple-blue text-white p-1.5 rounded-full border-4 border-bg-primary shadow-lg">
+                        <ShieldCheck size={14} />
                     </div>
-                    <h2 className="text-2xl font-black text-white uppercase tracking-widest">{user?.username || 'User'}</h2>
-                    <p className="text-gray-400 text-sm font-medium">{user?.email}</p>
                 </div>
 
+                <h2 className="text-2xl font-bold tracking-tight text-text-primary">
+                    {user?.username || 'Authenticated User'}
+                </h2>
+            </div>
+
+            <div className="space-y-6">
                 <div className="space-y-4">
-                    <button
+                    <div className="flex items-center gap-4 p-4 bg-bg-secondary/50 rounded-2xl border border-border-primary/50">
+                        <div className="p-2.5 bg-bg-primary rounded-xl shadow-sm text-text-secondary">
+                            <Mail size={18} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] uppercase tracking-wider font-bold text-text-secondary mb-0.5">Primary Email</p>
+                            <p className="text-sm font-semibold text-text-primary">{user?.email}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-bg-secondary/50 rounded-2xl border border-border-primary/50 text-xs">
+                        <span className="text-text-secondary font-medium">Account ID</span>
+                        <span className="font-mono text-text-primary bg-bg-primary px-2 py-1 rounded-md border border-border-primary shadow-sm">
+                            {user?.id?.substring(0, 8)}...
+                        </span>
+                    </div>
+                </div>
+
+                <div className="pt-4 flex flex-col gap-3">
+                    <Button
+                        variant="danger"
                         onClick={logout}
-                        className="w-full flex items-center justify-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 py-3 rounded-xl transition-all uppercase font-bold tracking-widest text-sm"
+                        className="w-full py-4 font-semibold tracking-wide flex gap-2"
                     >
                         <LogOut size={18} />
-                        <span>Logout</span>
-                    </button>
-
-
+                        <span>Logout Session</span>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        onClick={onClose}
+                        className="w-full text-xs text-text-secondary"
+                    >
+                        Close
+                    </Button>
                 </div>
             </div>
-        </div>
+        </Modal>
     );
 };
 

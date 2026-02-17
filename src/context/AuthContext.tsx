@@ -12,6 +12,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+    loginWithGoogle: (credential: string) => Promise<{ success: boolean; message?: string }>;
     signup: (username: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
     logout: () => void;
 }
@@ -57,6 +58,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const loginWithGoogle = async (credential: string) => {
+        try {
+            const response = await fetch('http://localhost:3001/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential }),
+            });
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Google Login failed');
+            }
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            setToken(data.token);
+            setUser(data.user);
+            setIsAuthenticated(true);
+            return { success: true };
+        } catch (error: any) {
+            console.error('Google Login Error:', error);
+            return { success: false, message: error.message };
+        }
+    };
+
     const signup = async (username: string, email: string, password: string) => {
         try {
             const response = await fetch('/api/auth/signup', {
@@ -84,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, user, token, login, signup, logout }}>
+        <AuthContext.Provider value={{ isAuthenticated, user, token, login, loginWithGoogle, signup, logout }}>
             {children}
         </AuthContext.Provider>
     );

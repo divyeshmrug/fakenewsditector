@@ -1,13 +1,15 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-// import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Logo from '../components/Logo';
+import { AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 
 const ForgotPassword = () => {
-    // const navigate = useNavigate();
-    const [step, setStep] = useState(1); // 1: Email, 2: OTP & New Password
+    const [step, setStep] = useState(1);
     const [email, setEmail] = useState('');
     const [otp, setOtp] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -23,7 +25,7 @@ const ForgotPassword = () => {
 
         try {
             await axios.post('/api/auth/forgot-password', { email });
-            setMessage('Verification code sent! Please checks your email.');
+            setMessage('Verification code sent! Please check your email.');
             setStep(2);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Failed to send code');
@@ -56,99 +58,112 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900">
-            <div className="absolute inset-0 bg-cover bg-center z-0 opacity-20" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1557683316-973673baf926?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')" }}></div>
-            <div className="z-10 mb-8 flex flex-col items-center">
-                <Logo size={60} className="mb-4 drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]" />
-                <h1 className="text-3xl font-black text-white tracking-tighter uppercase italic">Recover Account</h1>
+        <div className="min-h-screen w-full flex flex-col items-center justify-center premium-bg-gradient p-6 transition-colors duration-500 overflow-hidden relative">
+            {/* Ambient Noise Layer for Enterprise Matte Finish */}
+            <div className="noise-texture" aria-hidden="true" />
+            <div className="absolute top-8 right-8">
+                <ThemeToggle />
             </div>
 
-            <div className="z-10 bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-gray-700/50 max-w-md w-full mx-4">
-
-                {step === 1 ? (
-                    <>
-                        <p className="text-gray-400 text-center mb-6 text-sm">
-                            Enter your email address to receive a verification code.
-                        </p>
-                        {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-center text-sm">{error}</div>}
-                        {message && <div className="bg-green-500/20 text-green-300 p-3 rounded-lg mb-4 text-center text-sm">{message}</div>}
-
-                        <form onSubmit={handleSendCode} className="space-y-4">
-                            <div>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                                    placeholder="Enter your email"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-black py-4 px-4 rounded-xl transition duration-300 shadow-lg shadow-cyan-900/30 uppercase tracking-widest text-sm mt-4 disabled:opacity-50"
-                            >
-                                {loading ? 'Sending...' : 'Send Reset Code'}
-                            </button>
-                        </form>
-                    </>
-                ) : (
-                    <>
-                        <p className="text-gray-400 text-center mb-6 text-sm">
-                            Enter the code sent to <strong>{email}</strong> and your new password.
-                        </p>
-                        {error && <div className="bg-red-500/20 text-red-300 p-3 rounded-lg mb-4 text-center text-sm">{error}</div>}
-                        {message && <div className="bg-green-500/20 text-green-300 p-3 rounded-lg mb-4 text-center text-sm">{message}</div>}
-
-                        <form onSubmit={handleResetPassword} className="space-y-4">
-                            <div>
-                                <label className="block text-gray-400 text-xs uppercase font-bold mb-2 ml-1">Verification Code</label>
-                                <input
-                                    type="text"
-                                    value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    required
-                                    className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors tracking-widest text-center font-mono text-xl"
-                                    placeholder="000000"
-                                    maxLength={6}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-gray-400 text-xs uppercase font-bold mb-2 ml-1">New Password</label>
-                                <input
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    required
-                                    className="w-full bg-gray-900/50 border border-gray-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                                    placeholder="New Password"
-                                    minLength={6}
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black py-4 px-4 rounded-xl transition duration-300 shadow-lg shadow-cyan-900/30 uppercase tracking-widest text-sm mt-4 disabled:opacity-50"
-                            >
-                                {loading ? 'Updating...' : 'Set New Password'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setStep(1)}
-                                className="w-full text-gray-500 hover:text-gray-300 text-xs uppercase tracking-wider py-2"
-                            >
-                                Change Email
-                            </button>
-                        </form>
-                    </>
-                )}
-
-                <div className="mt-6 text-center">
-                    <Link to="/login" className="text-gray-400 hover:text-white text-sm transition-colors">
-                        Back to Login
-                    </Link>
+            <div className="w-full max-w-[400px] animate-reveal">
+                <div className="flex flex-col items-center mb-10">
+                    <Logo size={64} className="mb-4 shadow-2xl rounded-3xl" />
+                    <h1 className="text-2xl font-semibold tracking-tight text-text-primary">
+                        Recover Account
+                    </h1>
                 </div>
+
+                <Card className="shadow-2xl border-border-primary/50 relative overflow-hidden">
+                    <Link
+                        to="/login"
+                        className="absolute top-6 left-6 text-text-secondary hover:text-text-primary transition-colors"
+                    >
+                        <ChevronLeft size={20} />
+                    </Link>
+
+                    <div className="text-center mb-8 px-4">
+                        <h2 className="text-xl font-semibold text-text-primary">
+                            {step === 1 ? 'Forgot Password?' : 'Set New Password'}
+                        </h2>
+                        <p className="text-text-secondary text-sm mt-1">
+                            {step === 1
+                                ? "Enter your email for a reset code"
+                                : `Checking code for ${email}`}
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-500/10 text-red-500 p-4 rounded-2xl mb-6 text-sm flex items-start gap-3 border border-red-500/20">
+                            <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    {message && (
+                        <div className="bg-green-500/10 text-green-500 p-4 rounded-2xl mb-6 text-sm flex items-start gap-3 border border-green-500/20">
+                            <CheckCircle2 size={18} className="shrink-0 mt-0.5" />
+                            <span>{message}</span>
+                        </div>
+                    )}
+
+                    {step === 1 ? (
+                        <form onSubmit={handleSendCode} className="space-y-6">
+                            <Input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                label="Email Address"
+                                placeholder="name@example.com"
+                            />
+                            <Button
+                                type="submit"
+                                isLoading={loading}
+                                className="w-full py-4 text-sm font-semibold tracking-wide"
+                            >
+                                Send Reset Code
+                            </Button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleResetPassword} className="space-y-6">
+                            <Input
+                                label="Verification Code"
+                                type="text"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                required
+                                maxLength={6}
+                                className="text-center text-2xl tracking-[0.5em] font-mono h-16"
+                                placeholder="••••••"
+                            />
+                            <Input
+                                label="New Password"
+                                type="password"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                required
+                                placeholder="••••••••"
+                                minLength={6}
+                            />
+                            <div className="space-y-3">
+                                <Button
+                                    type="submit"
+                                    isLoading={loading}
+                                    className="w-full py-4 text-sm font-semibold tracking-wide"
+                                >
+                                    Set New Password
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setStep(1)}
+                                    className="w-full text-xs"
+                                >
+                                    Change Email
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                </Card>
             </div>
         </div>
     );
