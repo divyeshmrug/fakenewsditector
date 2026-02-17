@@ -224,16 +224,19 @@ const Login = () => {
                                 </Button>
                             </div>
 
-                            <div className="mt-10 text-center">
-                                <p className="text-sm text-text-secondary font-medium">
-                                    New to Axiant?{' '}
-                                    <Link to="/signup" className="text-apple-blue font-bold hover:underline ml-1">
-                                        Create your account
-                                    </Link>
-                                </p>
-                            </div>
+
+
                         </>
                     )}
+
+                    <div className="mt-10 text-center">
+                        <p className="text-sm text-text-secondary font-medium">
+                            New to Axiant?{' '}
+                            <Link to="/signup" className="text-apple-blue font-bold hover:underline ml-1">
+                                Create your account
+                            </Link>
+                        </p>
+                    </div>
                 </Card>
 
                 <div className="mt-12 text-center">
@@ -242,6 +245,7 @@ const Login = () => {
                     </p>
                 </div>
             </div>
+
         </div>
     );
 };

@@ -57,7 +57,10 @@ const Layout = () => {
                             <div className="flex items-center space-x-4">
                                 <ThemeToggle />
                                 <Link to="/login">
-                                    <Button size="sm">Login</Button>
+                                    <Button variant="ghost" size="sm">Login</Button>
+                                </Link>
+                                <Link to="/signup">
+                                    <Button size="sm">Sign Up</Button>
                                 </Link>
                             </div>
                         )}
