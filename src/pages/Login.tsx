@@ -192,7 +192,11 @@ const Login = () => {
                                     onClick={() => {
                                         console.log('Starting Google login...');
                                         try {
-                                            googleLogin();
+                                            if (googleLogin) {
+                                                googleLogin();
+                                            } else {
+                                                setError('Google login is not configured');
+                                            }
                                         } catch (e) {
                                             console.error('Error calling googleLogin():', e);
                                             setError('Failed to initialize Google login');
