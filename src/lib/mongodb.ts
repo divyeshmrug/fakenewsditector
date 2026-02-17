@@ -1,18 +1,11 @@
 import mongoose from 'mongoose';
 
-// Cross-environment MONGODB_URI resolution (Vite vs Node)
-const MONGODB_URI = (typeof process !== 'undefined' ? process.env.MONGODB_URI : undefined) ||
-    (typeof import.meta !== 'undefined' && 'env' in import.meta ? (import.meta as any).env.VITE_MONGODB_URI : undefined);
+const MONGODB_URI = process.env.MONGODB_URI || process.env.VITE_MONGODB_URI;
 
 if (!MONGODB_URI) {
-    console.warn('⚠️ MONGODB_URI environment variable is not defined. Features relying on MongoDB will be disabled.');
+    console.warn('⚠️ MONGODB_URI environment variable is not defined.');
 }
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
- */
 let cached = (global as any).mongoose;
 
 if (!cached) {
@@ -25,19 +18,22 @@ async function dbConnect() {
     }
 
     if (!MONGODB_URI) {
-        return null;
+        throw new Error('MONGODB_URI environment variable is NOT defined. Please check Vercel settings.');
     }
 
     const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, clientOptions as any).then((mongoose) => {
-        return mongoose;
-    });
+    if (!cached.promise) {
+        cached.promise = mongoose.connect(MONGODB_URI, clientOptions as any).then((mongoose) => {
+            return mongoose;
+        });
+    }
 
     try {
         cached.conn = await cached.promise;
     } catch (e) {
         cached.promise = null;
+        console.error('MongoDB Connection Error:', e);
         throw e;
     }
 

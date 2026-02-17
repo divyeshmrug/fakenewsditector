@@ -73,7 +73,7 @@ export const signup = async (req: Request, res: Response) => {
         res.status(201).json({ success: true, message: 'User created. Please verify your email.', userId: newUser._id, publicId: newUser.publicId });
     } catch (error: any) {
         console.error('Signup Error:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error' });
+        res.status(500).json({ success: false, message: `Server Error: ${error.message}`, stack: error.stack });
     }
 };
 
