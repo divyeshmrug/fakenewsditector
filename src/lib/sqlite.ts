@@ -5,13 +5,8 @@ let sqliteAvailable = false;
 
 try {
   const Database = await import('better-sqlite3');
-<<<<<<< HEAD
-  const dbPath = path.resolve(process.cwd(), 'chat_cache.sqlite');
-  db = new Database.default(dbPath);
-=======
   const DB_PATH = path.resolve(process.cwd(), 'chat_cache_v2.sqlite');
   db = new Database.default(DB_PATH, { timeout: 10000 }); // Increase timeout to avoid lock contention.
->>>>>>> 75f13df (Implement sequential User IDs, Smart Caching, and data cleanup tools)
 
   // Initialize table (v2 with userId, v3 with images)
   db.exec(`
@@ -41,10 +36,7 @@ try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
-<<<<<<< HEAD
-=======
       publicId TEXT,
->>>>>>> 75f13df (Implement sequential User IDs, Smart Caching, and data cleanup tools)
       username TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
@@ -52,8 +44,6 @@ try {
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-<<<<<<< HEAD
-=======
 
   // Add publicId column if it doesn't exist (Migration)
   try {
@@ -61,7 +51,6 @@ try {
   } catch (e) {
     // Column likely exists
   }
->>>>>>> 75f13df (Implement sequential User IDs, Smart Caching, and data cleanup tools)
   sqliteAvailable = true;
 } catch (e) {
   console.warn('SQLite not available (likely Serverless/Vercel). Using dummy implementation.');
@@ -191,20 +180,12 @@ export const saveUserToSQLite = (user: UserData) => {
   if (!sqliteAvailable) return;
   try {
     const stmt = db.prepare(`
-<<<<<<< HEAD
-      INSERT OR REPLACE INTO users (id, username, email, password, isVerified)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-    stmt.run(
-      user.id,
-=======
       INSERT OR REPLACE INTO users (id, publicId, username, email, password, isVerified)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       user.id,
       user.publicId || null,
->>>>>>> 75f13df (Implement sequential User IDs, Smart Caching, and data cleanup tools)
       user.username,
       user.email,
       user.password,
@@ -222,10 +203,7 @@ export const findUserInSQLite = (email: string) => {
       return {
         ...user,
         _id: user.id,
-<<<<<<< HEAD
-=======
         // publicId is already in user object
->>>>>>> 75f13df (Implement sequential User IDs, Smart Caching, and data cleanup tools)
         isVerified: user.isVerified === 1
       };
     }
