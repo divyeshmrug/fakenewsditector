@@ -2,7 +2,16 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
 import dbConnect from '../src/lib/mongodb';
 import Chat from '../src/models/Chat';
-import { saveToSQLite, findInSQLite, getHistoryFromSQLite } from '../src/lib/sqlite';
+import { saveToSQLite, findInSQLite, getHistoryFromSQLite, findInSQLiteByHash } from '../src/lib/sqlite';
+import fs from 'fs';
+import path from 'path';
+
+const debugLog = (msg: string) => {
+    try {
+        const logPath = path.join(process.cwd(), 'debug_api.log');
+        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`);
+    } catch (e) { }
+};
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-this';
 
@@ -37,17 +46,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 // Support for image hash cache check (?imageHash=hash_value)
                 if (query.imageHash) {
                     const hashToSearch = query.imageHash as string;
+                    const textFilter = query.q as string;
 
-                    // Check MongoDB for cached image analysis
+                    debugLog(`Image Cache Check: hash=${hashToSearch}, text=${textFilter || 'EMPTY'}, user=${userId}`);
+
+                    // 1. Check SQLite first
+                    try {
+                        const cachedInSQLite = findInSQLiteByHash(hashToSearch, textFilter || undefined);
+                        if (cachedInSQLite && cachedInSQLite.userId === userId) {
+                            // EXTRA SAFE: Ensure text matches if filter was provided
+                            if (!textFilter || cachedInSQLite.text === textFilter) {
+                                debugLog('Image Cache Hit (SQLite)');
+                                return res.status(200).json({ success: true, data: cachedInSQLite, source: 'sqlite-image-cache' });
+                            }
+                        }
+                    } catch (err) {
+                        debugLog(`SQLite Error: ${err}`);
+                    }
+
+                    // 2. Check MongoDB for cached image analysis
                     let cachedImageInMongo = null;
                     if (isDbConnected) {
-                        cachedImageInMongo = await Chat.findOne({ imageHash: hashToSearch, userId });
+                        try {
+                            const filter: any = { imageHash: hashToSearch, userId };
+                            if (textFilter) filter.text = textFilter;
+
+                            debugLog(`MongoDB Filter: ${JSON.stringify(filter)}`);
+                            cachedImageInMongo = await Chat.findOne(filter);
+                        } catch (mongoErr) {
+                            debugLog(`MongoDB Error: ${mongoErr}`);
+                        }
                     }
 
                     if (cachedImageInMongo) {
+                        debugLog('Image Cache Hit (MongoDB)');
                         return res.status(200).json({ success: true, data: cachedImageInMongo, source: 'mongodb-image-cache' });
                     }
 
+                    debugLog('Image Cache Miss');
                     return res.status(200).json({ success: true, data: null });
                 }
 

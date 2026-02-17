@@ -13,8 +13,8 @@ export const detectFakeNewsWithAI = async (text: string, context?: string, apiKe
         console.log("Analyzing with AI Core:", text || "Direct Image Analysis");
 
         const token = apiKey || SECURE_API_KEY;
-        // Use Llama 3.2 Vision (Standard Groq Vision Model)
-        const selectedModel = base64Image ? 'llama-3.2-90b-vision-preview' : (modelName || MODEL_NAME);
+        // Use Llama 4 Scout (Recommended Groq Vision/Multimodal Model)
+        const selectedModel = base64Image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : (modelName || MODEL_NAME);
 
         if (!token) {
             return {
@@ -60,13 +60,10 @@ export const detectFakeNewsWithAI = async (text: string, context?: string, apiKe
        - Use 'MISLEADING' when a claim contains partial truths but misrepresents facts
        - Use 'UNVERIFIED' when there is NO SPECIFIC CLAIM to verify (e.g., just an image without text/claim)
     
-    5. **Image-Only Analysis**: 
-       - If analyzing an image WITHOUT a specific claim or text, you MUST:
-         * Return label: 'UNVERIFIED'
-         * Set score to 0
-         * In the reason, describe what you see in the image (who/what/where if identifiable)
-         * Explain that without a specific claim, you cannot verify truthfulness
-       - DO NOT try to invent claims or mark images as TRUE/FALSE/MISLEADING without an actual claim to verify
+    5. **Image Analysis**: 
+       - If an image contains a clear viral headline, news ticker, or widely known misinformation, you MAY classify it as 'TRUE', 'FALSE', or 'MISLEADING' based on visual evidence.
+       - If an image is ambiguous or lacks a specific claim to verify, use label: 'UNVERIFIED'.
+       - In the reason, describe what you see and explain your classification.
 
     ${contextSection}
 

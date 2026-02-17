@@ -58,19 +58,32 @@ const Dashboard = () => {
 
             // 0. CHECK CACHE FIRST to save API limits
             if (base64Image) {
-                // Check image cache using hash
+                // Check image cache using hash and current text
                 const imageHash = generateImageHash(base64Image);
-                const cachedImageResult = await checkImageCache(imageHash, token || undefined);
+                const currentText = text.trim();
+                const cachedImageResult = await checkImageCache(imageHash, currentText || undefined, token || undefined);
+
                 if (cachedImageResult) {
-                    console.log("Using cached result for image with hash:", imageHash);
-                    setResult({
-                        label: cachedImageResult.label as any,
-                        score: cachedImageResult.score,
-                        reason: cachedImageResult.reason + " (Cached Image Result)"
-                    });
-                    setFactCheck(cachedImageResult.factCheck || null);
-                    setLoading(false);
-                    return;
+                    // CRITICAL: Double check that the cached result is actually for the same text
+                    // If we provide text, the cache MUST match it. 
+                    // If we didn't provide text (just image), we accept any image-only match.
+                    const cacheText = (cachedImageResult.text || '').trim();
+                    const isTextMatch = !currentText || cacheText === currentText;
+
+                    if (isTextMatch) {
+                        console.log("Using valid cached result for image:", imageHash);
+                        setResult({
+                            label: cachedImageResult.label as any,
+                            score: cachedImageResult.score,
+                            reason: cachedImageResult.reason + " (Cached Image Result)"
+                        });
+                        setFactCheck(cachedImageResult.factCheck || null);
+                        setLoading(false);
+                        return;
+                    } else {
+                        console.warn("Cache hit for image hash but text mismatch. Ignoring stale result.");
+                        console.log(`Current: "${currentText}", Cached: "${cacheText}"`);
+                    }
                 }
             } else if (text.trim()) {
                 // Check text cache
@@ -308,11 +321,17 @@ const Dashboard = () => {
                                     className="p-3 bg-gray-800/80 hover:bg-cyan-600/20 text-cyan-400 border border-gray-700 rounded-xl cursor-pointer transition-all flex items-center group/btn"
                                     title="Extract text from image"
                                 >
-                                    {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />}
+                                    {ocrLoading ? <Loader2 className="animate-spin" size={20} /> : (base64Image ? <Check size={20} className="text-green-400 group-hover/btn:scale-110 transition-transform" /> : <ImageIcon size={20} className="group-hover/btn:scale-110 transition-transform" />)}
                                 </label>
                             </div>
                         </div>
                     </div>
+                    {base64Image && (
+                        <div className="flex items-center space-x-2 mb-4 animate-fade-in">
+                            <ShieldCheck size={16} className="text-cyan-400" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-400/80">Image analysis engine confirmed and ready</span>
+                        </div>
+                    )}
                     <div className="mt-8 flex justify-end">
                         <button
                             onClick={handleAnalyze}

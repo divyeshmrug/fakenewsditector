@@ -53,6 +53,7 @@ app.get('/health', (req, res) => {
 
 // Helper wrapper for async handlers
 const wrap = (fn: any) => (req: any, res: any, next: any) => {
+    console.log(`[API-IN] ${req.method} ${req.url} params=${JSON.stringify(req.query)}`);
     Promise.resolve(fn(req, res)).catch(next);
 };
 

@@ -119,6 +119,30 @@ export const findInSQLite = (text: string) => {
   }
 };
 
+export const findInSQLiteByHash = (imageHash: string, text?: string) => {
+  if (!sqliteAvailable) return null;
+  try {
+    let sql = 'SELECT * FROM user_chats WHERE imageHash = ?';
+    const params = [imageHash];
+
+    if (text) {
+      sql += ' AND text = ?';
+      params.push(text);
+    }
+
+    const stmt = db.prepare(sql);
+    const chat = stmt.get(...params) as any;
+    if (chat) {
+      chat.factCheck = chat.factCheck ? JSON.parse(chat.factCheck) : null;
+      chat._id = chat.id;
+    }
+    return chat;
+  } catch (e) {
+    console.error('SQLite Hash Lookup Error:', e);
+    return null;
+  }
+};
+
 export const getHistoryFromSQLite = (userId: string) => {
   if (!sqliteAvailable) return [];
   try {

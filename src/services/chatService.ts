@@ -59,9 +59,12 @@ export const checkCache = async (text: string, token?: string): Promise<ChatReco
     }
 };
 
-export const checkImageCache = async (imageHash: string, token?: string): Promise<ChatRecord | null> => {
+export const checkImageCache = async (imageHash: string, text?: string, token?: string): Promise<ChatRecord | null> => {
     try {
-        const response = await axios.get(`/api/chats?imageHash=${encodeURIComponent(imageHash)}`, {
+        let url = `/api/chats?imageHash=${encodeURIComponent(imageHash)}`;
+        if (text) url += `&q=${encodeURIComponent(text)}`;
+
+        const response = await axios.get(url, {
             headers: getHeaders(token)
         });
         const result = response.data.data;
