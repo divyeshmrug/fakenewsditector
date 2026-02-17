@@ -4,7 +4,7 @@ export interface IUser extends Document {
     publicId: string; // e.g., axiant_intelligence_123456
     username: string;
     email: string;
-    password: string; // Hashed with Argon2
+    password: string; // Hashed with Bcrypt
     isVerified: boolean;
     authProvider?: 'local' | 'google' | 'apple';
     otp?: string;

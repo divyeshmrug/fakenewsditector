@@ -88,7 +88,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, email, password }),
             });
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                const text = await response.text().catch(() => '');
+                throw new Error(`Server Error (${response.status}): ${text.slice(0, 50)}`);
+            }
+
             if (!data.success) {
                 throw new Error(data.message || 'Signup failed');
             }

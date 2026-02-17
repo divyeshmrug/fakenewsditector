@@ -1,7 +1,7 @@
 
 
 import { Request, Response } from 'express';
-import argon2 from 'argon2';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../src/models/User.js';
 import { saveUserToSQLite, findUserInSQLite } from '../src/lib/sqlite.js';
@@ -37,7 +37,7 @@ export const signup = async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'Email already exists' });
         }
 
-        const hashedPassword = await argon2.hash(password);
+        const hashedPassword = await bcrypt.hash(password, 10);
         const otp = generateOTP();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
@@ -156,7 +156,7 @@ export const login = async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'Invalid credentials' });
         }
 
-        const validPassword = await argon2.verify(user.password, password);
+        const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             console.log(`[Auth] Invalid password for: ${email}`);
             return res.status(400).json({ success: false, message: 'Invalid credentials' });
@@ -218,7 +218,7 @@ export const resetPassword = async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
         }
 
-        user.password = await argon2.hash(newPassword);
+        user.password = await bcrypt.hash(newPassword, 10);
         user.resetToken = undefined;
         user.resetTokenExpires = undefined;
         await user.save();
@@ -264,7 +264,7 @@ export const googleLogin = async (req: Request, res: Response) => {
 
         if (!user) {
             // Create user for Google Login
-            const hashedPassword = await argon2.hash(Math.random().toString(36)); // Random password for social login
+            const hashedPassword = await bcrypt.hash(Math.random().toString(36), 10); // Random password for social login
             user = await User.create({
                 username,
                 email,
