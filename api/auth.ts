@@ -3,14 +3,14 @@
 import { Request, Response } from 'express';
 import argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
-import User from '../src/models/User';
-import { saveUserToSQLite, findUserInSQLite } from '../src/lib/sqlite';
-import { sendOTP, sendWelcomeEmail, sendPasswordResetEmail } from '../src/lib/mail';
-import dbConnect from '../src/lib/mongodb';
+import User from '../src/models/User.js';
+import { saveUserToSQLite, findUserInSQLite } from '../src/lib/sqlite.js';
+import { sendOTP, sendWelcomeEmail, sendPasswordResetEmail } from '../src/lib/mail.js';
+import dbConnect from '../src/lib/mongodb.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-change-this';
 
-import Counter from '../src/models/Counter';
+import Counter from '../src/models/Counter.js';
 
 // Generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
