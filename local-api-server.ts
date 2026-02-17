@@ -68,7 +68,7 @@ app.all('/api/chats/:id', (req, res, next) => {
 app.post('/api/fact-check', wrap(factCheckHandler));
 
 // Auth Routes
-import * as auth from './api/auth';
+import * as auth from './api/_auth';
 app.post('/api/auth/signup', wrap(auth.signup));
 app.post('/api/auth/verify', wrap(auth.verify));
 app.post('/api/auth/login', wrap(auth.login));
